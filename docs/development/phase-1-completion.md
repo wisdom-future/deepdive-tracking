@@ -14,7 +14,7 @@
   - 任务队列: Celery
   - AI集成: OpenAI, LangChain
   - 开发工具: Black, Flake8, Mypy, Pytest
-  
+
 - ✅ `setup.py` - 包安装配置
 - ✅ `.env.example` - 70行环境变量模板，包含：
   - 应用配置
@@ -183,7 +183,7 @@ deepdive-tracking/
 - ✅ 类名: PascalCase (Settings, SessionLocal)
 - ✅ 函数: snake_case (get_settings, create_app)
 - ✅ 常量: UPPER_CASE (API_VERSION)
-- ✅ 文档: kebab-case (README.md, docker-compose.yml)
+- ✅ 文档: kebab-case (phase-1-completion.md)
 
 ### Python代码风格 (04-python-code-style.md)
 - ✅ 所有函数有类型注解
