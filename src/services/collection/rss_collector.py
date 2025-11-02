@@ -140,9 +140,8 @@ class RSSCollector(BaseCollector):
         # Return empty string if nothing found
         return ""
 
-    @staticmethod
-    def _extract_author(entry: Dict[str, Any]) -> str:
-        """Extract author with multiple sources.
+    def _extract_author(self, entry: Dict[str, Any]) -> str:
+        """Extract author with fallback to data source default.
 
         Args:
             entry: Parsed RSS entry from feedparser
@@ -159,14 +158,22 @@ class RSSCollector(BaseCollector):
         if "author_detail" in entry:
             author_detail = entry.get("author_detail", {})
             if isinstance(author_detail, dict):
-                return author_detail.get("name", "").strip()
+                author = author_detail.get("name", "").strip()
+                if author:
+                    return author
 
         # Try contributors
         contributors = entry.get("contributors", [])
         if contributors and isinstance(contributors, list):
             for contributor in contributors:
                 if isinstance(contributor, dict) and "name" in contributor:
-                    return contributor.get("name", "").strip()
+                    author = contributor.get("name", "").strip()
+                    if author:
+                        return author
+
+        # Fallback to data source's default author
+        if self.data_source and self.data_source.default_author:
+            return self.data_source.default_author
 
         # Return empty string if no author found
         return ""

@@ -46,6 +46,9 @@ class DataSource(BaseModel, Base):
     supports_filter: Mapped[bool] = mapped_column(Boolean, default=False)
     tags: Mapped[Optional[List[str]]] = mapped_column(JSON, default=[])
 
+    # Metadata defaults
+    default_author: Mapped[Optional[str]] = mapped_column(String(255))
+
     # Meta
     created_by: Mapped[Optional[str]] = mapped_column(String(255))
 
