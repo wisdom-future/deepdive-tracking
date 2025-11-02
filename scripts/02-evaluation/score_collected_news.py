@@ -90,23 +90,17 @@ async def main():
                 # 调用评分服务
                 result = await service.score_news(article)
 
-                # 提取字段
-                score = result.score
-                categories = result.categories if result.categories else []
-                summary = (result.summary[:300] if result.summary else "")
-                keywords = result.keywords if result.keywords else []
-                cost = result.cost
+                # 提取字段 (使用正确的嵌套结构)
+                score = result.scoring.score
+                category = result.scoring.category.value if result.scoring.category else "unknown"
+                sub_categories = result.scoring.sub_categories if result.scoring.sub_categories else []
+                summary_pro = result.summaries.summary_pro
+                summary_sci = result.summaries.summary_sci
+                keywords = result.scoring.keywords if result.scoring.keywords else []
+                cost = result.metadata.cost
 
-                # 保存到数据库
-                processed = ProcessedNews(
-                    raw_news_id=article.id,
-                    score=score,
-                    category=','.join(categories),
-                    summary=summary,
-                    keywords=','.join(keywords) if keywords else None
-                )
-                session.add(processed)
-                session.commit()
+                # 保存到数据库 (调用服务的保存方法)
+                await service.save_to_database(article, result)
 
                 scored_count += 1
                 total_cost += cost
