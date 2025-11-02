@@ -17,6 +17,7 @@ except ImportError:
 
 from src.models import DataSource, RawNews
 from src.services.collection.base_collector import BaseCollector
+from src.utils.html_cleaner import HTMLCleaner
 
 logger = logging.getLogger(__name__)
 
@@ -113,29 +114,40 @@ class RSSCollector(BaseCollector):
 
     @staticmethod
     def _extract_content(entry: Dict[str, Any]) -> str:
-        """Extract full article content with fallback strategy.
+        """Extract full article content with HTML cleaning.
+
+        Tries multiple content sources with fallback strategy:
+        1. content (Atom format - usually HTML)
+        2. summary (RSS format - may contain HTML)
+        3. description (RSS format - may contain HTML)
+
+        All content is cleaned to remove HTML tags and convert to plain text.
 
         Args:
             entry: Parsed RSS entry from feedparser
 
         Returns:
-            Article content string
+            Cleaned article content string (plain text)
         """
+        raw_content = ""
+
         # Try content (Atom format - highest priority)
         if "content" in entry and entry.content:
             content_list = entry.get("content", [])
             if content_list and isinstance(content_list, list):
-                return content_list[0].get("value", "").strip()
+                raw_content = content_list[0].get("value", "").strip()
+                if raw_content:
+                    return HTMLCleaner.clean(raw_content)
 
         # Try summary (RSS format - second priority)
         summary = entry.get("summary", "").strip()
         if summary:
-            return summary
+            return HTMLCleaner.clean(summary)
 
         # Fallback to description
         description = entry.get("description", "").strip()
         if description:
-            return description
+            return HTMLCleaner.clean(description)
 
         # Return empty string if nothing found
         return ""
