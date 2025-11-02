@@ -4,7 +4,7 @@ import logging
 from typing import Tuple, Dict, Any
 from sqlalchemy.orm import Session
 
-from src.services.review_service import ReviewService
+from src.services.review.review_service import ReviewService
 from src.models import ContentReview, ProcessedNews
 
 logger = logging.getLogger(__name__)

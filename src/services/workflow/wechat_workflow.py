@@ -4,7 +4,7 @@ import logging
 from typing import Dict, Any, Optional, List
 from sqlalchemy.orm import Session
 
-from src.services.publishing_service import PublishingService
+from src.services.publishing.publishing_service import PublishingService
 from src.models import ContentReview, PublishedContent, ProcessedNews, RawNews
 
 logger = logging.getLogger(__name__)
