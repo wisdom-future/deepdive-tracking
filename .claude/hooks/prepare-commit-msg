@@ -1,0 +1,52 @@
+#!/bin/bash
+# Prepare-commit-msg hook to enforce Conventional Commits format
+# This hook helps enforce a consistent commit message format
+
+COMMIT_MSG_FILE=$1
+COMMIT_SOURCE=$2
+
+# Skip if merging or rebasing
+if [ "$COMMIT_SOURCE" = "merge" ] || [ "$COMMIT_SOURCE" = "squash" ]; then
+    exit 0
+fi
+
+# Read current commit message
+COMMIT_MSG=$(cat "$COMMIT_MSG_FILE")
+
+# Skip if message already starts with a type (to avoid double-processing)
+if [[ $COMMIT_MSG =~ ^(feat|fix|docs|style|refactor|perf|test|chore|ci|revert)\(.*\): ]]; then
+    exit 0
+fi
+
+# Prepend a template if the message is empty or just comments
+if [ -z "$(echo "$COMMIT_MSG" | grep -v '^#')" ]; then
+    cat > "$COMMIT_MSG_FILE" << 'EOF'
+# <type>(<scope>): <subject>
+#
+# <body>
+#
+# <footer>
+#
+# TYPES:
+#   feat     - A new feature
+#   fix      - A bug fix
+#   docs     - Documentation changes
+#   style    - Code style changes (formatting, missing semicolons, etc)
+#   refactor - Code refactoring without feature changes
+#   perf     - Performance improvements
+#   test     - Adding or updating tests
+#   chore    - Build process, dependencies, etc
+#   ci       - CI/CD configuration changes
+#   revert   - Revert previous commit
+#
+# EXAMPLE:
+#   feat(auth): add two-factor authentication
+#
+#   Implement two-factor authentication for user accounts
+#   supporting both SMS and email verification.
+#
+#   Closes #123
+EOF
+fi
+
+exit 0
