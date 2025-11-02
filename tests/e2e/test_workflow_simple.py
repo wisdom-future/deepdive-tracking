@@ -22,6 +22,7 @@ import os
 from pathlib import Path
 import io
 from datetime import datetime
+import asyncio
 
 # 设置标准输出编码为 UTF-8 (Windows 兼容)
 if sys.stdout.encoding != 'utf-8':
@@ -135,7 +136,8 @@ def main():
                 for idx, raw_news in enumerate(unscored, 1):
                     try:
                         print(f"  [{idx:2d}/{len(unscored)}] {raw_news.title[:50]}...", end="", flush=True)
-                        result = scoring_service.score_article(raw_news)
+                        # 使用 asyncio 运行异步方法
+                        result = asyncio.run(scoring_service.score_news(raw_news))
 
                         if result:
                             success_count += 1
@@ -147,7 +149,7 @@ def main():
 
                     except Exception as e:
                         failed_count += 1
-                        print(f" ✗ 错误")
+                        print(f" ✗ 错误: {str(e)[:50]}")
 
                 print()
                 print(f"  评分统计:")
