@@ -24,38 +24,45 @@ AI-powered news tracking platform for technology decision makers. Automatically 
 ### Prerequisites
 
 - Python 3.10+
-- PostgreSQL 13+
-- Redis 6+
-- Docker & Docker Compose (optional)
+- Windows 10+ (or Linux/macOS)
+- Docker & Docker Compose (included in Docker Desktop)
+- PostgreSQL 13+ and Redis 6+ (via Docker)
 
-### Installation
+### Installation & Data Collection (3 Steps)
 
-1. Clone the repository:
-```bash
-git clone https://github.com/wisdom-future/deepdive-tracking.git
-cd deepdive-tracking
+**For detailed instructions, see: [`docs/guides/quickstart.md`](docs/guides/quickstart.md)**
+
+#### Step 1: Install Docker (5-10 minutes)
+```powershell
+# Windows PowerShell (as Administrator)
+powershell -ExecutionPolicy Bypass -File scripts/setup/install-docker.ps1
 ```
 
-2. Create virtual environment:
+#### Step 2: Start System & Run Collection (3 minutes)
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/setup/run-collection.ps1
+```
+
+#### Step 3: Verify Data
+```powershell
+psql -h localhost -U deepdive -d deepdive_db
+deepdive_db=> SELECT COUNT(*) FROM raw_news;
+```
+
+### Development Server
+
+After initial setup, start the development API server:
+
 ```bash
+# Create virtual environment
 python -m venv venv
 source venv/bin/activate  # On Windows: venv\Scripts\activate
-```
 
-3. Install dependencies:
-```bash
-make dev-install
-```
+# Install dependencies
+pip install -r requirements.txt
 
-4. Copy environment configuration:
-```bash
-cp .env.example .env
-# Edit .env with your settings
-```
-
-5. Run development server:
-```bash
-make run
+# Run the server
+uvicorn src.main:app --reload
 ```
 
 The API will be available at `http://localhost:8000`
