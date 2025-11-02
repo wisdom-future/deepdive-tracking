@@ -216,8 +216,8 @@ def main():
                             result = asyncio.run(
                                 scoring_service.score_news(raw_news)
                             )
-                            # score_news returns FullScoringResult, get the score from it
-                            score = result.scoring_result.score if hasattr(result, 'scoring_result') else result.score
+                            # score_news returns FullScoringResult with scoring attribute
+                            score = result.scoring.score
                             print_info(f"  [{idx}/{len(unscored)}] ✓ {raw_news.title[:50]}... (分数: {score})")
                             scored_count += 1
                         else:
