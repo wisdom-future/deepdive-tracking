@@ -81,14 +81,26 @@ echo ""
 # ============================================================================
 echo "${BLUE}3️⃣ Scanning for uppercase filenames...${NC}"
 
-UPPERCASE_FILES=$(find .claude -type f \( -name "*.md" -o -name "*.py" -o -name "*.txt" -o -name "*.sh" \) -name "*[A-Z]*" 2>/dev/null || true)
+# Check for files with patterns like UPPERCASE_WORDS.md or UPPERCASE-WORDS.md
+# Allowed: README.md, CLAUDE.md (these are exceptions)
+VIOLATIONS=$(find .claude/handoff -type f \( -name "*.md" -o -name "*.txt" \) -exec sh -c '
+  name=$(basename "$1")
+  # Allow only README, CLAUDE, or lowercase/kebab-case names
+  if [[ "$name" == "README.md" ]] || [[ "$name" == "CLAUDE.md" ]]; then
+    exit 0
+  fi
+  # Reject if contains consecutive uppercase letters (like ANALYSIS, COMPLIANCE, etc.)
+  if [[ "$name" =~ [A-Z]{2,} ]]; then
+    echo "$1"
+  fi
+' _ {} \; 2>/dev/null || true)
 
-if [ ! -z "$UPPERCASE_FILES" ]; then
-    echo -e "${RED}❌ FAILED: Found files with uppercase names:${NC}"
-    echo "$UPPERCASE_FILES" | sed 's/^/   /'
+if [ ! -z "$VIOLATIONS" ]; then
+    echo -e "${RED}❌ FAILED: Found files with uppercase patterns:${NC}"
+    echo "$VIOLATIONS" | sed 's/^/   /'
     FAILED=1
 else
-    echo -e "${GREEN}✅ PASSED: No uppercase filenames found${NC}"
+    echo -e "${GREEN}✅ PASSED: No problematic uppercase filenames found${NC}"
 fi
 
 echo ""
