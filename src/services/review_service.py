@@ -248,6 +248,139 @@ class ReviewService:
         self.logger.info(f"Submitted edits for review {review_id}")
         return review
 
+    def auto_approve_reviews(
+        self,
+        score_threshold: int = 50,
+        max_reviews: int = 100
+    ) -> Tuple[int, int]:
+        """Automatically approve reviews based on score threshold.
+
+        This method implements automatic review workflow:
+        - Reviews pending articles
+        - Approves articles with score >= score_threshold
+        - Marks as auto-approved by system
+
+        Args:
+            score_threshold: Minimum score to auto-approve (0-100)
+            max_reviews: Maximum number of reviews to process in one batch
+
+        Returns:
+            Tuple of (approved_count, skipped_count)
+        """
+        # Get pending reviews
+        pending_reviews = self.db_session.query(ContentReview).filter(
+            ContentReview.status.in_(["pending", "needs_edit"])
+        ).limit(max_reviews).all()
+
+        approved_count = 0
+        skipped_count = 0
+
+        for review in pending_reviews:
+            try:
+                # Get the associated processed news to check score
+                processed_news = self.db_session.query(ProcessedNews).filter(
+                    ProcessedNews.id == review.processed_news_id
+                ).first()
+
+                if not processed_news:
+                    self.logger.warning(
+                        f"Processed news {review.processed_news_id} not found for review {review.id}"
+                    )
+                    skipped_count += 1
+                    continue
+
+                # Check if score meets threshold
+                if processed_news.score is not None and processed_news.score >= score_threshold:
+                    # Auto-approve high-scoring articles
+                    review.status = "approved"
+                    review.review_decision = "approved"
+                    review.reviewed_by = "system_auto"
+                    review.reviewed_at = datetime.utcnow()
+                    review.reviewer_confidence = 0.85  # Auto-approve confidence
+                    review.reviewer_tags = ["auto_approved", f"score_{processed_news.score}"]
+
+                    self.db_session.commit()
+                    approved_count += 1
+
+                    self.logger.info(
+                        f"Auto-approved review {review.id} for processed_news {review.processed_news_id} "
+                        f"(score: {processed_news.score})"
+                    )
+                else:
+                    skipped_count += 1
+                    self.logger.debug(
+                        f"Skipped auto-approval for review {review.id} "
+                        f"(score: {processed_news.score}, threshold: {score_threshold})"
+                    )
+
+            except Exception as e:
+                self.logger.error(
+                    f"Error auto-approving review {review.id}: {str(e)}"
+                )
+                skipped_count += 1
+
+        self.logger.info(
+            f"Auto-review complete: {approved_count} approved, {skipped_count} skipped"
+        )
+        return approved_count, skipped_count
+
+    def auto_approve_by_processed_news_id(
+        self,
+        processed_news_id: int,
+        score_threshold: int = 50
+    ) -> ContentReview:
+        """Auto-approve a specific processed news item if it meets score threshold.
+
+        Args:
+            processed_news_id: ID of the processed news
+            score_threshold: Minimum score to auto-approve
+
+        Returns:
+            Updated ContentReview
+
+        Raises:
+            ValueError: If processed news or review not found
+        """
+        # Get or create review
+        review = self.db_session.query(ContentReview).filter(
+            ContentReview.processed_news_id == processed_news_id
+        ).first()
+
+        if not review:
+            # Create new review if it doesn't exist
+            review = self.create_review(processed_news_id)
+
+        # Get processed news to check score
+        processed_news = self.db_session.query(ProcessedNews).filter(
+            ProcessedNews.id == processed_news_id
+        ).first()
+
+        if not processed_news:
+            raise ValueError(f"Processed news {processed_news_id} not found")
+
+        # Auto-approve if score meets threshold
+        if processed_news.score is not None and processed_news.score >= score_threshold:
+            review.status = "approved"
+            review.review_decision = "approved"
+            review.reviewed_by = "system_auto"
+            review.reviewed_at = datetime.utcnow()
+            review.reviewer_confidence = 0.85
+            review.reviewer_tags = ["auto_approved", f"score_{processed_news.score}"]
+
+            self.db_session.commit()
+
+            self.logger.info(
+                f"Auto-approved review {review.id} for processed_news {processed_news_id} "
+                f"(score: {processed_news.score})"
+            )
+        else:
+            self.logger.debug(
+                f"Could not auto-approve review {review.id}: "
+                f"score {processed_news.score} below threshold {score_threshold}"
+            )
+
+        return review
+
     def get_review_stats(self) -> dict:
         """Get review statistics.
 
@@ -264,11 +397,15 @@ class ReviewService:
         rejected = self.db_session.query(ContentReview).filter(
             ContentReview.status == "rejected"
         ).count()
+        auto_approved = self.db_session.query(ContentReview).filter(
+            ContentReview.reviewed_by == "system_auto"
+        ).count()
 
         return {
             "total": total,
             "pending": pending,
             "approved": approved,
             "rejected": rejected,
+            "auto_approved": auto_approved,
             "approval_rate": approved / total * 100 if total > 0 else 0
         }
