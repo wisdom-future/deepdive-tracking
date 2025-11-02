@@ -99,10 +99,10 @@ class WeChatPublishingWorkflowV2:
                 "id": processed_news.id,
                 "title": raw_news.title,
                 "content": raw_news.content or processed_news.summary_pro,
-                "summary": processed_news.summary_pro or raw_news.description,
-                "author": "DeepDive",
+                "summary": processed_news.summary_pro,
+                "author": raw_news.author or "DeepDive",
                 "source_url": raw_news.url,
-                "cover_image_url": raw_news.image_url,
+                "cover_image_url": None,  # RawNews doesn't have image_url
                 "score": processed_news.score,
                 "category": processed_news.category,
                 "review_id": review.id
@@ -245,6 +245,13 @@ class WeChatPublishingWorkflowV2:
                 "message": f"Workflow execution failed: {str(e)}"
             }
 
+    def _get_raw_news_id(self, processed_news_id: int) -> int:
+        """Get raw_news_id from processed_news_id."""
+        processed = self.db_session.query(ProcessedNews).filter(
+            ProcessedNews.id == processed_news_id
+        ).first()
+        return processed.raw_news_id if processed else 0
+
     def _save_published_content(
         self,
         processed_news_id: int,
@@ -269,17 +276,12 @@ class WeChatPublishingWorkflowV2:
         published = PublishedContent(
             processed_news_id=processed_news_id,
             content_review_id=review_id,
-            channel=channel,
+            raw_news_id=self._get_raw_news_id(processed_news_id),
             publish_status="published",
-            publish_timestamp=datetime.utcnow(),
-            external_id=msg_id,
-            publish_url=f"https://mp.weixin.qq.com/?v={media_id}",
-            metadata={
-                "media_id": media_id,
-                "msg_id": msg_id,
-                "api_version": "v2",
-                "timestamp": datetime.utcnow().isoformat()
-            }
+            published_at=datetime.utcnow(),
+            wechat_msg_id=msg_id,
+            wechat_url=f"https://mp.weixin.qq.com/?v={media_id}",
+            published_by="system_wechat_v2"
         )
 
         self.db_session.add(published)

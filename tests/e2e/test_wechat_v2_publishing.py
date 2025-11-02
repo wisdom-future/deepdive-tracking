@@ -202,10 +202,8 @@ def main():
             print(f"\n  最新发布记录:")
             for pub in latest_published:
                 print(f"    - 状态: {pub.publish_status}")
-                print(f"      频道: {pub.channel}")
-                print(f"      时间: {pub.publish_timestamp}")
-                metadata = pub.metadata or {}
-                print(f"      media_id: {metadata.get('media_id', 'N/A')}")
+                print(f"      时间: {pub.published_at}")
+                print(f"      msg_id: {pub.wechat_msg_id}")
 
         print()
 

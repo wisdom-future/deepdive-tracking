@@ -1,29 +1,56 @@
-"""Database models for DeepDive Tracking."""
+"""Database models for DeepDive Tracking.
 
+Models are organized by domain:
+- collection: Data sources and raw news
+- processing: AI-processed content
+- review: Content review and statistics
+- publishing: Published content and scheduling
+- channels: Channel-specific models (WeChat, etc.)
+- logging: Cost tracking and operation logs
+"""
+
+# Base
 from src.models.base import Base
-from src.models.data_source import DataSource
-from src.models.raw_news import RawNews
-from src.models.processed_news import ProcessedNews
-from src.models.content_review import ContentReview
-from src.models.published_content import PublishedContent
-from src.models.content_stats import ContentStats
-from src.models.publishing_schedule import PublishingSchedule
-from src.models.publishing_schedule_content import publishing_schedule_content
-from src.models.cost_log import CostLog
-from src.models.operation_log import OperationLog
-from src.models.wechat_media_cache import WeChatMediaCache
+
+# Collection models
+from src.models.collection import DataSource, RawNews
+
+# Processing models
+from src.models.processing import ProcessedNews
+
+# Review models
+from src.models.review import ContentReview, ContentStats
+
+# Publishing models
+from src.models.publishing import (
+    PublishedContent,
+    PublishingSchedule,
+    publishing_schedule_content,
+)
+
+# Channel models
+from src.models.channels import WeChatMediaCache
+
+# Logging models
+from src.models.logging import CostLog, OperationLog
 
 __all__ = [
     "Base",
+    # Collection
     "DataSource",
     "RawNews",
+    # Processing
     "ProcessedNews",
+    # Review
     "ContentReview",
-    "PublishedContent",
     "ContentStats",
+    # Publishing
+    "PublishedContent",
     "PublishingSchedule",
     "publishing_schedule_content",
+    # Channels
+    "WeChatMediaCache",
+    # Logging
     "CostLog",
     "OperationLog",
-    "WeChatMediaCache",
 ]
