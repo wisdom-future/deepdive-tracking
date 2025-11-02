@@ -8,6 +8,13 @@ import feedparser
 import aiohttp
 from pytz import UTC
 
+try:
+    from langdetect import detect, LangDetectException
+except ImportError:
+    # Fallback if langdetect not installed
+    detect = None
+    LangDetectException = Exception
+
 from src.models import DataSource, RawNews
 from src.services.collection.base_collector import BaseCollector
 
@@ -72,13 +79,22 @@ class RSSCollector(BaseCollector):
 
         for entry in parsed.entries[:max_items]:
             try:
+                # Extract content with fallback strategy
+                content = self._extract_content(entry)
+
+                # Detect language from content
+                language = self._detect_language(content)
+
+                # Extract author with multiple sources
+                author = self._extract_author(entry)
+
                 article = {
                     "title": entry.get("title", ""),
                     "url": entry.get("link", ""),
-                    "content": entry.get("summary", ""),
-                    "author": entry.get("author", ""),
+                    "content": content,
+                    "author": author,
                     "published_at": self._parse_published_date(entry),
-                    "language": "en",
+                    "language": language,
                     "html_content": None,
                 }
 
@@ -94,6 +110,99 @@ class RSSCollector(BaseCollector):
                 continue
 
         return articles
+
+    @staticmethod
+    def _extract_content(entry: Dict[str, Any]) -> str:
+        """Extract full article content with fallback strategy.
+
+        Args:
+            entry: Parsed RSS entry from feedparser
+
+        Returns:
+            Article content string
+        """
+        # Try content (Atom format - highest priority)
+        if "content" in entry and entry.content:
+            content_list = entry.get("content", [])
+            if content_list and isinstance(content_list, list):
+                return content_list[0].get("value", "").strip()
+
+        # Try summary (RSS format - second priority)
+        summary = entry.get("summary", "").strip()
+        if summary:
+            return summary
+
+        # Fallback to description
+        description = entry.get("description", "").strip()
+        if description:
+            return description
+
+        # Return empty string if nothing found
+        return ""
+
+    @staticmethod
+    def _extract_author(entry: Dict[str, Any]) -> str:
+        """Extract author with multiple sources.
+
+        Args:
+            entry: Parsed RSS entry from feedparser
+
+        Returns:
+            Author name string, or empty string if not found
+        """
+        # Try direct author field
+        author = entry.get("author", "").strip()
+        if author:
+            return author
+
+        # Try author_detail object
+        if "author_detail" in entry:
+            author_detail = entry.get("author_detail", {})
+            if isinstance(author_detail, dict):
+                return author_detail.get("name", "").strip()
+
+        # Try contributors
+        contributors = entry.get("contributors", [])
+        if contributors and isinstance(contributors, list):
+            for contributor in contributors:
+                if isinstance(contributor, dict) and "name" in contributor:
+                    return contributor.get("name", "").strip()
+
+        # Return empty string if no author found
+        return ""
+
+    @staticmethod
+    def _detect_language(text: str) -> str:
+        """Auto-detect language from text.
+
+        Args:
+            text: Text content to detect language from
+
+        Returns:
+            Two-letter language code (e.g., 'en', 'zh', 'fr')
+            Returns 'unknown' if detection fails or text is too short
+        """
+        # Need minimum text length for reliable detection
+        if not text or len(text) < 10:
+            return "unknown"
+
+        try:
+            if detect is None:
+                # langdetect not available, default to 'en'
+                return "en"
+
+            lang = detect(text)
+
+            # Ensure we have 2-letter code
+            if isinstance(lang, str) and len(lang) >= 2:
+                return lang[:2].lower()
+
+            return "unknown"
+
+        except Exception as e:
+            # Log detection failure but don't break processing
+            logger.debug(f"Language detection failed: {e}")
+            return "unknown"
 
     @staticmethod
     def _parse_published_date(entry: Dict[str, Any]) -> datetime:
