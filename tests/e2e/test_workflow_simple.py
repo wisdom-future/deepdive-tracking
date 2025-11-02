@@ -28,7 +28,8 @@ if sys.stdout.encoding != 'utf-8':
     sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
 
 # 添加项目根目录到 Python 路径
-project_root = Path(__file__).parent
+# 从 tests/e2e/ 向上两层到项目根目录
+project_root = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(project_root))
 
 from sqlalchemy import create_engine
