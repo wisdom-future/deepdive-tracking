@@ -89,7 +89,7 @@ class TestScoringPerformance:
             mock_summary_pro = Mock()
             mock_summary_pro.choices = [Mock()]
             mock_summary_pro.choices[0].message.content = json.dumps({
-                "summary_pro": "Professional summary for performance benchmark test."
+                "summary_pro": "Professional summary for performance benchmark test of AI scoring system capabilities and functionality analysis."
             })
             mock_summary_pro.usage.prompt_tokens = 200
             mock_summary_pro.usage.completion_tokens = 100
@@ -97,7 +97,7 @@ class TestScoringPerformance:
             mock_summary_sci = Mock()
             mock_summary_sci.choices = [Mock()]
             mock_summary_sci.choices[0].message.content = json.dumps({
-                "summary_sci": "Scientific summary for performance benchmark test."
+                "summary_sci": "Scientific summary explaining performance benchmark test results for general audience understanding."
             })
             mock_summary_sci.usage.prompt_tokens = 200
             mock_summary_sci.usage.completion_tokens = 100
@@ -161,7 +161,7 @@ class TestScoringPerformance:
             mock_summary = Mock()
             mock_summary.choices = [Mock()]
             mock_summary.choices[0].message.content = json.dumps({
-                "summary_pro": "Summary for batch performance test item."
+                "summary_pro": "Batch performance test summary demonstrating key findings and analysis results. This test measures processing efficiency and cost metrics for large-scale news item evaluation and categorization."
             })
             mock_summary.usage.prompt_tokens = 200
             mock_summary.usage.completion_tokens = 100
