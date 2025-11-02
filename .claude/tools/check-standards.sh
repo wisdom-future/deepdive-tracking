@@ -28,13 +28,16 @@ echo ""
 echo "${BLUE}1. Checking file naming conventions...${NC}"
 
 check_file_names() {
-    local pattern='[A-Z].*\.(py|md|txt|yml|yaml|sh)$'
+    # Check for files with problematic uppercase patterns
+    # Allowed: README.md, CLAUDE.md, LICENSE (conventions)
+    # Not allowed: MY_FILE.md, RULES-COMPLIANCE.md, etc.
     local violations=$(find . -type f \( -name "*.py" -o -name "*.md" -o -name "*.txt" -o -name "*.sh" \) \
-        -path "./src/*" -o -path "./tests/*" -o -path "./.claude/*" 2>/dev/null | \
-        grep -E "$pattern" | grep -v ".git" | grep -v "__pycache__" || true)
+        \( -path "./src/*" -o -path "./tests/*" -o -path "./.claude/*" \) \
+        ! -name "README.md" ! -name "CLAUDE.md" ! -name "LICENSE" \
+        -exec sh -c 'basename "$1" | grep -qE "^[A-Z][A-Z0-9_-]+\.(py|md|txt|yml|yaml|sh)$" && echo "$1"' _ {} \; 2>/dev/null || true)
 
     if [ ! -z "$violations" ]; then
-        echo -e "${RED}❌ Found files with uppercase naming:${NC}"
+        echo -e "${RED}❌ Found files with problematic uppercase naming:${NC}"
         echo "$violations" | sed 's/^/   /'
         return 1
     fi
