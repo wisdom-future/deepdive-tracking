@@ -4,7 +4,8 @@
 
 import sys
 import io
-sys.path.insert(0, '.')
+project_root = Path(__file__).parent.parent.parent
+sys.path.insert(0, str(project_root))
 
 # Fix encoding on Windows
 if sys.stdout.encoding != 'utf-8':

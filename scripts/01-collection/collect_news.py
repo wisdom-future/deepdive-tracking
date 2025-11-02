@@ -21,8 +21,9 @@ from datetime import datetime
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-# 添加项目路径
-sys.path.insert(0, str(Path(__file__).parent.parent))
+# 添加项目路径 (从 scripts/01-collection/ 上升到项目根目录)
+project_root = Path(__file__).parent.parent.parent
+sys.path.insert(0, str(project_root))
 
 from src.config import get_settings
 from src.models.base import Base
