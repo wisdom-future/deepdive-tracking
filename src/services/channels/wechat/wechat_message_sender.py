@@ -13,6 +13,7 @@ WeChat 客服消息发送器
 
 import aiohttp
 import logging
+import json
 from typing import Dict, Optional, List
 from datetime import datetime, timedelta
 
@@ -58,7 +59,16 @@ class WeChatMessageSender:
                     if resp.status != 200:
                         raise Exception(f"HTTP {resp.status}: {await resp.text()}")
 
-                    data = await resp.json()
+                    # Handle both JSON and text responses
+                    content_type = resp.content_type
+                    if "application/json" in content_type:
+                        data = await resp.json()
+                    else:
+                        text = await resp.text()
+                        try:
+                            data = json.loads(text)
+                        except json.JSONDecodeError:
+                            raise Exception(f"WeChat API returned non-JSON response: {text}")
 
                     if "errcode" in data:
                         raise Exception(f"WeChat API Error: {data.get('errmsg', 'Unknown error')}")
@@ -123,7 +133,16 @@ class WeChatMessageSender:
                     json=payload,
                     timeout=aiohttp.ClientTimeout(total=30)
                 ) as resp:
-                    result = await resp.json()
+                    # Handle both JSON and text responses
+                    content_type = resp.content_type
+                    if "application/json" in content_type:
+                        result = await resp.json()
+                    else:
+                        text = await resp.text()
+                        try:
+                            result = json.loads(text)
+                        except json.JSONDecodeError:
+                            raise Exception(f"WeChat API returned non-JSON response: {text}")
 
                     if "errcode" in result and result["errcode"] != 0:
                         raise Exception(f"WeChat API Error: {result.get('errmsg', 'Unknown error')}")
@@ -184,7 +203,16 @@ class WeChatMessageSender:
                     json=payload,
                     timeout=aiohttp.ClientTimeout(total=30)
                 ) as resp:
-                    result = await resp.json()
+                    # Handle both JSON and text responses
+                    content_type = resp.content_type
+                    if "application/json" in content_type:
+                        result = await resp.json()
+                    else:
+                        text = await resp.text()
+                        try:
+                            result = json.loads(text)
+                        except json.JSONDecodeError:
+                            raise Exception(f"WeChat API returned non-JSON response: {text}")
 
                     if "errcode" in result and result["errcode"] != 0:
                         raise Exception(f"WeChat API Error: {result.get('errmsg', 'Unknown error')}")
@@ -245,7 +273,16 @@ class WeChatMessageSender:
                     json=payload,
                     timeout=aiohttp.ClientTimeout(total=30)
                 ) as resp:
-                    result = await resp.json()
+                    # Handle both JSON and text responses
+                    content_type = resp.content_type
+                    if "application/json" in content_type:
+                        result = await resp.json()
+                    else:
+                        text = await resp.text()
+                        try:
+                            result = json.loads(text)
+                        except json.JSONDecodeError:
+                            raise Exception(f"WeChat API returned non-JSON response: {text}")
 
                     if "errcode" in result and result["errcode"] != 0:
                         raise Exception(f"WeChat API Error: {result.get('errmsg', 'Unknown error')}")
@@ -285,7 +322,16 @@ class WeChatMessageSender:
                     json=payload,
                     timeout=aiohttp.ClientTimeout(total=10)
                 ) as resp:
-                    result = await resp.json()
+                    # Handle both JSON and text responses
+                    content_type = resp.content_type
+                    if "application/json" in content_type:
+                        result = await resp.json()
+                    else:
+                        text = await resp.text()
+                        try:
+                            result = json.loads(text)
+                        except json.JSONDecodeError:
+                            raise Exception(f"WeChat API returned non-JSON response: {text}")
 
                     if "errcode" in result and result["errcode"] != 0:
                         raise Exception(f"WeChat API Error: {result.get('errmsg', 'Unknown error')}")
@@ -326,7 +372,16 @@ class WeChatMessageSender:
                     json=payload,
                     timeout=aiohttp.ClientTimeout(total=10)
                 ) as resp:
-                    result = await resp.json()
+                    # Handle both JSON and text responses
+                    content_type = resp.content_type
+                    if "application/json" in content_type:
+                        result = await resp.json()
+                    else:
+                        text = await resp.text()
+                        try:
+                            result = json.loads(text)
+                        except json.JSONDecodeError:
+                            raise Exception(f"WeChat API returned non-JSON response: {text}")
 
                     if "errcode" in result and result["errcode"] != 0:
                         raise Exception(f"WeChat API Error: {result.get('errmsg', 'Unknown error')}")
@@ -383,7 +438,16 @@ class WeChatMessageSender:
                     json=payload,
                     timeout=aiohttp.ClientTimeout(total=30)
                 ) as resp:
-                    result = await resp.json()
+                    # Handle both JSON and text responses
+                    content_type = resp.content_type
+                    if "application/json" in content_type:
+                        result = await resp.json()
+                    else:
+                        text = await resp.text()
+                        try:
+                            result = json.loads(text)
+                        except json.JSONDecodeError:
+                            raise Exception(f"WeChat API returned non-JSON response: {text}")
 
                     if "errcode" in result and result["errcode"] != 0:
                         raise Exception(f"WeChat API Error: {result.get('errmsg', 'Unknown error')}")

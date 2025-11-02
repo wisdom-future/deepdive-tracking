@@ -14,6 +14,7 @@ WeChat 永久素材管理器
 
 import aiohttp
 import logging
+import json
 from typing import Dict, List, Optional
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -197,7 +198,20 @@ class WeChatMaterialManager:
                     json=payload,
                     timeout=aiohttp.ClientTimeout(total=30)
                 ) as resp:
-                    result = await resp.json()
+                    # Handle both JSON and text responses
+                    content_type = resp.content_type
+
+                    if "application/json" in content_type:
+                        result = await resp.json()
+                    else:
+                        # WeChat might return text/plain in error cases
+                        text = await resp.text()
+                        logger.warning(f"WeChat API returned {content_type}: {text}")
+                        # Try to parse as JSON anyway
+                        try:
+                            result = json.loads(text)
+                        except json.JSONDecodeError:
+                            raise Exception(f"WeChat API returned non-JSON response: {text}")
 
                     if "errcode" in result and result["errcode"] != 0:
                         raise Exception(f"WeChat API Error: {result.get('errmsg', 'Unknown error')}")

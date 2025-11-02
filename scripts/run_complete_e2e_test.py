@@ -157,13 +157,14 @@ def main():
 
             collector = CollectionManager(session)
             try:
-                collected = collector.collect_from_enabled_sources(limit=num_articles)
-                print_success(f"采集完成: {len(collected)} 篇新文章")
+                result = asyncio.run(collector.collect_all())
+                collected_count = result.get('total_new', 0)
+                print_success(f"采集完成: {collected_count} 篇新文章")
 
-                if collected:
-                    print(f"  样本文章:")
-                    for article in collected[:3]:
-                        print(f"    - {article.title[:60]}...")
+                if result.get('by_source'):
+                    print(f"  按数据源统计:")
+                    for source_name, stats in result['by_source'].items():
+                        print(f"    - {source_name}: {stats.get('new', 0)} 篇新文章")
             except Exception as e:
                 print_error(f"采集失败: {str(e)}")
                 print_warning("继续使用现有数据进行测试...")
@@ -185,17 +186,17 @@ def main():
         from src.services.ai.scoring_service import ScoringService
 
         try:
-            scoring_service = ScoringService(session)
+            scoring_service = ScoringService(settings, session)
 
-            # Get unscored articles
+            # Get unscored articles - using has() for scalar relationships
             unscored = session.query(RawNews).filter(
-                ~RawNews.processed_news.any()
+                ~RawNews.processed_news.has()
             ).limit(num_articles).all()
 
             if not unscored:
                 print_warning(f"没有未评分的文章，使用已评分的文章进行测试")
                 unscored = session.query(RawNews).filter(
-                    RawNews.processed_news.any()
+                    RawNews.processed_news.has()
                 ).limit(num_articles).all()
 
             if unscored:
@@ -212,10 +213,12 @@ def main():
                         ).first()
 
                         if not existing:
-                            processed = asyncio.run(
+                            result = asyncio.run(
                                 scoring_service.score_news(raw_news)
                             )
-                            print_info(f"  [{idx}/{len(unscored)}] ✓ {raw_news.title[:50]}... (分数: {processed.score})")
+                            # score_news returns FullScoringResult, get the score from it
+                            score = result.scoring_result.score if hasattr(result, 'scoring_result') else result.score
+                            print_info(f"  [{idx}/{len(unscored)}] ✓ {raw_news.title[:50]}... (分数: {score})")
                             scored_count += 1
                         else:
                             print_info(f"  [{idx}/{len(unscored)}] ⊘ {raw_news.title[:50]}... (已评分)")
