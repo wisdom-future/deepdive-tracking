@@ -1,0 +1,40 @@
+#!/bin/bash
+# Commit-msg hook to validate Conventional Commits format
+
+COMMIT_MSG_FILE=$1
+
+# Read the commit message
+COMMIT_MSG=$(cat "$COMMIT_MSG_FILE")
+
+# Remove comments
+COMMIT_MSG=$(echo "$COMMIT_MSG" | grep -v '^#' | tr -d '\n')
+
+# Check if message matches Conventional Commits format
+# Format: <type>(<scope>): <subject>
+if ! [[ $COMMIT_MSG =~ ^(feat|fix|docs|style|refactor|perf|test|chore|ci|revert)(\(.+\))?: .{1,} ]]; then
+    echo "❌ Commit message does not follow Conventional Commits format!"
+    echo ""
+    echo "Required format:"
+    echo "  <type>(<scope>): <subject>"
+    echo ""
+    echo "Valid types: feat, fix, docs, style, refactor, perf, test, chore, ci, revert"
+    echo ""
+    echo "Examples:"
+    echo "  ✅ feat(auth): add two-factor authentication"
+    echo "  ✅ fix(database): handle null values in migrations"
+    echo "  ✅ docs: update README with setup instructions"
+    echo ""
+    echo "Your message:"
+    echo "  '$COMMIT_MSG'"
+    echo ""
+    exit 1
+fi
+
+# Check message length
+FIRST_LINE=$(echo "$COMMIT_MSG" | cut -d' ' -f1-10)
+if [ ${#COMMIT_MSG} -gt 100 ]; then
+    echo "⚠️  WARNING: Commit message is too long (${#COMMIT_MSG} chars)"
+    echo "Try to keep the first line under 100 characters"
+fi
+
+exit 0
