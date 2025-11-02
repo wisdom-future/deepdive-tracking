@@ -32,7 +32,8 @@ class RawNews(BaseModel, Base):
 
     # Relationships
     data_source = relationship("DataSource", back_populates="raw_news")
-    processed_news = relationship("ProcessedNews", back_populates="raw_news")
+    processed_news = relationship("ProcessedNews", back_populates="raw_news", uselist=False)
+    published_content = relationship("PublishedContent", foreign_keys="PublishedContent.raw_news_id")
 
     __table_args__ = (
         CheckConstraint(

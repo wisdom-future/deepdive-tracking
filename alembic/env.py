@@ -12,9 +12,10 @@ from alembic import context
 # Add src directory to path for imports
 sys.path.insert(0, os.path.dirname(__file__) + "/../")
 
-# Import models metadata
-from src.database.connection import engine
+# Import models metadata - Note: This doesn't create a connection
 from src.models.base import Base
+# Models are automatically registered via imports through Base.metadata
+from src.models import DataSource, RawNews, ProcessedNews, ContentReview, PublishedContent, ContentStats, PublishingSchedule, CostLog, OperationLog
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
@@ -51,7 +52,7 @@ def run_migrations_offline() -> None:
     context.configure(
         url=url,
         target_metadata=target_metadata,
-        literal_binds=True,
+        literal_binds=False,
         dialect_opts={"paramstyle": "named"},
     )
 
@@ -66,6 +67,7 @@ def run_migrations_online() -> None:
     and associate a connection with the context.
 
     """
+    from sqlalchemy import create_engine
     connectable = engine_from_config(
         config.get_section(config.config_ini_section, {}),
         prefix="sqlalchemy.",

@@ -8,6 +8,7 @@ from src.models.content_review import ContentReview
 from src.models.published_content import PublishedContent
 from src.models.content_stats import ContentStats
 from src.models.publishing_schedule import PublishingSchedule
+from src.models.publishing_schedule_content import publishing_schedule_content
 from src.models.cost_log import CostLog
 from src.models.operation_log import OperationLog
 
@@ -20,6 +21,7 @@ __all__ = [
     "PublishedContent",
     "ContentStats",
     "PublishingSchedule",
+    "publishing_schedule_content",
     "CostLog",
     "OperationLog",
 ]
