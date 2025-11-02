@@ -226,8 +226,8 @@ class PriorityPublishingWorkflow:
 
             self.logger.info(f"发布优先级顺序:")
             for channel, config in channel_priorities:
-                status = "✅" if self.publishers.get(channel) else "❌"
-                print(f"  {status} {channel.upper()}: 优先级 {config.priority}/10")
+                status = "OK" if self.publishers.get(channel) else "SKIP"
+                self.logger.info(f"  [{status}] {channel.upper()}: 优先级 {config.priority}/10")
 
             # 获取待发布文章
             articles = self._get_approved_articles(limit=article_limit)

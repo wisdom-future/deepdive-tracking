@@ -108,8 +108,8 @@ async def run_priority_publishing_test(
                 "smtp_port": settings.smtp_port,
                 "smtp_user": settings.smtp_user,
                 "smtp_password": settings.smtp_password,
-                "from_email": settings.from_email,
-                "from_name": "DeepDive Tracking",
+                "from_email": settings.smtp_from_email,
+                "from_name": settings.smtp_from_name,
                 "email_list": settings.email_list,
             }
 
@@ -118,7 +118,7 @@ async def run_priority_publishing_test(
                 "token": settings.github_token,
                 "repo": settings.github_repo,
                 "username": settings.github_username,
-                "local_path": settings.github_local_repo_path,
+                "local_path": settings.github_local_path,
             }
 
         if wechat_config is None:
@@ -127,12 +127,39 @@ async def run_priority_publishing_test(
                 "app_secret": settings.wechat_app_secret,
             }
 
-        # 配置所有渠道
+        # 配置所有渠道 - 仅配置有完整凭证的渠道
+        valid_email_config = email_config if all([
+            email_config.get("smtp_host"),
+            email_config.get("smtp_user"),
+            email_config.get("smtp_password")
+        ]) else None
+
+        valid_github_config = github_config if all([
+            github_config.get("token"),
+            github_config.get("repo")
+        ]) else None
+
+        valid_wechat_config = wechat_config if all([
+            wechat_config.get("app_id"),
+            wechat_config.get("app_secret")
+        ]) else None
+
         workflow.configure_channels(
-            email_config=email_config,
-            github_config=github_config,
-            wechat_config=wechat_config,
+            email_config=valid_email_config,
+            github_config=valid_github_config,
+            wechat_config=valid_wechat_config,
         )
+
+        # 检查是否有任何配置
+        if not any([valid_email_config, valid_github_config, valid_wechat_config]):
+            logger.warning("⚠️  没有任何发布渠道的凭证被完全配置")
+            logger.info("请在 .env 文件中配置以下环境变量:")
+            logger.info("  - Email: SMTP_HOST, SMTP_USER, SMTP_PASSWORD, SMTP_FROM_EMAIL")
+            logger.info("  - GitHub: GITHUB_TOKEN, GITHUB_REPO")
+            logger.info("  - WeChat: WECHAT_APP_ID, WECHAT_APP_SECRET")
+            logger.info("")
+            logger.info("自动切换到 dry-run 模式...")
+            dry_run = True
 
         logger.info("✓ 所有渠道已配置")
         logger.info("")
