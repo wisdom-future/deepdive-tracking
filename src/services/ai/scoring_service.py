@@ -22,6 +22,7 @@ from src.services.ai.prompt_templates import (
     SCORING_SYSTEM_PROMPT,
 )
 from src.config.settings import Settings
+from src.utils.api_response import strip_markdown_code_blocks
 
 logger = logging.getLogger(__name__)
 
@@ -262,6 +263,16 @@ class ScoringService:
 
             # Parse response
             response_text = response.choices[0].message.content
+
+            # Add debug logging to help troubleshoot API response issues
+            self.logger.debug(f"Raw API response: {repr(response_text[:500])}")
+
+            if not response_text or not response_text.strip():
+                raise ValueError("API returned empty response")
+
+            # Strip markdown code blocks if present
+            response_text = strip_markdown_code_blocks(response_text)
+
             response_json = json.loads(response_text)
 
             # Calculate cost (rough estimate)
@@ -275,6 +286,7 @@ class ScoringService:
 
         except json.JSONDecodeError as e:
             self.logger.error(f"Invalid JSON in API response: {str(e)}")
+            self.logger.error(f"Response text was: {repr(response_text[:500])}")
             raise ValueError(f"API returned invalid JSON: {str(e)}") from e
 
     async def _generate_summary(
@@ -315,9 +327,13 @@ class ScoringService:
             )
 
             response_text = response.choices[0].message.content
-            response_json = json.loads(response_text)
+
+            # Strip markdown code blocks if present
+            response_text_clean = strip_markdown_code_blocks(response_text)
+
+            response_json = json.loads(response_text_clean)
             summary_key = f"summary_{version[:3]}"  # summary_pro or summary_sci
-            summary = response_json.get(summary_key, response_text)
+            summary = response_json.get(summary_key, response_text_clean)
 
             # Calculate cost
             input_tokens = response.usage.prompt_tokens

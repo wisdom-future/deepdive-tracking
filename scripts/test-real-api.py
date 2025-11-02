@@ -19,6 +19,7 @@
 import asyncio
 import sys
 import os
+import logging
 from datetime import datetime
 from pathlib import Path
 import io
@@ -30,6 +31,12 @@ if sys.stdout.encoding != 'utf-8':
 # 添加项目根目录到 Python 路径
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
+
+# 设置日志为 DEBUG 以查看详细信息
+logging.basicConfig(
+    level=logging.DEBUG,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
 
 try:
     from sqlalchemy import create_engine
