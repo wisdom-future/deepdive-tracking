@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """
 真实 API 快速测试脚本
 
@@ -20,6 +21,11 @@ import sys
 import os
 from datetime import datetime
 from pathlib import Path
+import io
+
+# 设置标准输出编码为 UTF-8 (Windows 兼容)
+if sys.stdout.encoding != 'utf-8':
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
 
 # 添加项目根目录到 Python 路径
 project_root = Path(__file__).parent.parent
@@ -84,9 +90,9 @@ async def main():
     try:
         data_source = DataSource(
             name="Quick Test Source",
-            source_type="manual",
+            type="api",  # 必须是: rss, crawler, api, twitter, email
             url="https://example.com/test",
-            active=True,
+            is_enabled=True,
         )
         db_session.add(data_source)
         db_session.commit()
