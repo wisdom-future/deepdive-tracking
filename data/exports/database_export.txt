@@ -1,0 +1,116 @@
+====================================================================================================
+DATABASE CONTENT - ALL COLLECTED NEWS
+====================================================================================================
+
+TOTAL RECORDS: 10
+
+
+====================================================================================================
+NEWS ITEM #1
+====================================================================================================
+ID:          1
+Title:       Expanding Stargate to Michigan
+URL:         https://openai.com/index/expanding-stargate-to-michigan
+Source:      OpenAI Blog
+Published:   2025-10-30 13:30:00.000000
+Collected:   2025-11-02 18:26:29.324115
+Content:     OpenAI is expanding Stargate to Michigan with a new one-gigawatt campus that strengthens America’s AI infrastructure. The project will create jobs, drive investment, and support economic growth across the Midwest.
+
+====================================================================================================
+NEWS ITEM #2
+====================================================================================================
+ID:          2
+Title:       Introducing Aardvark: OpenAI’s agentic security researcher
+URL:         https://openai.com/index/introducing-aardvark
+Source:      OpenAI Blog
+Published:   2025-10-30 11:00:00.000000
+Collected:   2025-11-02 18:26:29.327240
+Content:     OpenAI introduces Aardvark, an AI-powered security researcher that autonomously finds, validates, and helps fix software vulnerabilities at scale. The system is in private beta—sign up to join early testing.
+
+====================================================================================================
+NEWS ITEM #3
+====================================================================================================
+ID:          3
+Title:       How we built OWL, the new architecture behind our ChatGPT-based browser, Atlas
+URL:         https://openai.com/index/building-chatgpt-atlas
+Source:      OpenAI Blog
+Published:   2025-10-30 00:00:00.000000
+Collected:   2025-11-02 18:26:29.328734
+Content:     A deep dive into OWL, the new architecture powering ChatGPT Atlas—decoupling Chromium, enabling fast startup, rich UI, and agentic browsing with ChatGPT.
+
+====================================================================================================
+NEWS ITEM #4
+====================================================================================================
+ID:          4
+Title:       Technical Report: Performance and baseline evaluations of gpt-oss-safeguard-120b and gpt-oss-safeguard-20b
+URL:         https://openai.com/index/gpt-oss-safeguard-technical-report
+Source:      OpenAI Blog
+Published:   2025-10-29 00:00:00.000000
+Collected:   2025-11-02 18:26:29.330509
+Content:     gpt-oss-safeguard-120b and gpt-oss-safeguard-20b are two open-weight reasoning models post-trained from the gpt-oss models and trained to reason from a provided policy in order to label content under that policy. In this report, we describe gpt-oss-safeguard’s capabilities and provide our baseline safety evaluations on the gpt-oss-safeguard models, using the underlying gpt-oss models as a baseline. For more information about the development and architecture of the underlying gpt-oss models, see the original gpt-oss model model card⁠.
+
+====================================================================================================
+NEWS ITEM #5
+====================================================================================================
+ID:          5
+Title:       Introducing gpt-oss-safeguard
+URL:         https://openai.com/index/introducing-gpt-oss-safeguard
+Source:      OpenAI Blog
+Published:   2025-10-29 00:00:00.000000
+Collected:   2025-11-02 18:26:29.331569
+Content:     OpenAI introduces gpt-oss-safeguard—open-weight reasoning models for safety classification that let developers apply and iterate on custom policies.
+
+====================================================================================================
+NEWS ITEM #6
+====================================================================================================
+ID:          6
+Title:       Knowledge preservation powered by ChatGPT
+URL:         https://openai.com/index/dai-nippon-printing
+Source:      OpenAI Blog
+Published:   2025-10-28 17:00:00.000000
+Collected:   2025-11-02 18:26:29.332412
+Content:     Dai Nippon Printing (DNP) rolled out ChatGPT Enterprise across ten core departments to drive companywide adoption. Within three months, it achieved 95% faster patent research, 10x processing volume, 100% weekly active usage, 87% automation, and 70% knowledge reuse.
+
+====================================================================================================
+NEWS ITEM #7
+====================================================================================================
+ID:          7
+Title:       Doppel’s AI defense system stops attacks before they spread
+URL:         https://openai.com/index/doppel
+Source:      OpenAI Blog
+Published:   2025-10-28 10:00:00.000000
+Collected:   2025-11-02 18:26:29.333234
+Content:     Discover how Doppel uses OpenAI’s GPT-5 and reinforcement fine-tuning (RFT) to stop deepfake and impersonation attacks before they spread, cutting analyst workloads by 80% and reducing threat response from hours to minutes.
+
+====================================================================================================
+NEWS ITEM #8
+====================================================================================================
+ID:          8
+Title:       The next chapter of the Microsoft–OpenAI partnership
+URL:         https://openai.com/index/next-chapter-of-microsoft-openai-partnership
+Source:      OpenAI Blog
+Published:   2025-10-28 06:00:00.000000
+Collected:   2025-11-02 18:26:29.334080
+Content:     Microsoft and OpenAI sign a new agreement that strengthens its long-term partnership, expands innovation, and ensures responsible AI progress.
+
+====================================================================================================
+NEWS ITEM #9
+====================================================================================================
+ID:          9
+Title:       Built to benefit everyone
+URL:         https://openai.com/index/built-to-benefit-everyone
+Source:      OpenAI Blog
+Published:   2025-10-28 06:00:00.000000
+Collected:   2025-11-02 18:26:29.335050
+Content:     OpenAI’s recapitalization strengthens mission-focused governance, expanding resources to ensure AI benefits everyone while advancing innovation responsibly.
+
+====================================================================================================
+NEWS ITEM #10
+====================================================================================================
+ID:          10
+Title:       Seizing the AI opportunity
+URL:         https://openai.com/global-affairs/seizing-the-ai-opportunity
+Source:      OpenAI Blog
+Published:   2025-10-27 12:00:00.000000
+Collected:   2025-11-02 18:26:29.335788
+Content:     Meeting the demands of the Intelligence Age will require strategic investment in energy and infrastructure. OpenAI’s submission to the White House details how expanding capacity and workforce readiness can sustain U.S. leadership in AI and economic growth.

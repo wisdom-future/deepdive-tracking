@@ -1,0 +1,19 @@
+
+========================================================================================================================
+采集新闻汇总表
+========================================================================================================================
+
+总记录数: 10
+
+序号    标题                                                                               来源              发布时间                
+------------------------------------------------------------------------------------------------------------------------
+1     Expanding Stargate to Michigan                                                   OpenAI Blog     2025-10-30 13:30:00.000000
+2     Introducing Aardvark: OpenAI’s agentic security researcher                       OpenAI Blog     2025-10-30 11:00:00.000000
+3     How we built OWL, the new architecture behind our ChatGPT-based browser, At...   OpenAI Blog     2025-10-30 00:00:00.000000
+4     Technical Report: Performance and baseline evaluations of gpt-oss-safeguard...   OpenAI Blog     2025-10-29 00:00:00.000000
+5     Introducing gpt-oss-safeguard                                                    OpenAI Blog     2025-10-29 00:00:00.000000
+6     Knowledge preservation powered by ChatGPT                                        OpenAI Blog     2025-10-28 17:00:00.000000
+7     Doppel’s AI defense system stops attacks before they spread                      OpenAI Blog     2025-10-28 10:00:00.000000
+8     The next chapter of the Microsoft–OpenAI partnership                             OpenAI Blog     2025-10-28 06:00:00.000000
+9     Built to benefit everyone                                                        OpenAI Blog     2025-10-28 06:00:00.000000
+10    Seizing the AI opportunity                                                       OpenAI Blog     2025-10-27 12:00:00.000000

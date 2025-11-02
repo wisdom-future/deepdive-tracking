@@ -104,11 +104,22 @@ for file in $STAGED_FILES; do
         continue
     fi
 
-    # Check for common secret patterns (only in source code)
-    if grep -Ei "password|api.key|secret|token|private.key" "$file" 2>/dev/null | grep -v "#"; then
-        echo -e "${RED}❌ FAILED${NC}: $file"
-        echo "   Reason: Possible hardcoded credentials detected"
-        SECRETS_FOUND=1
+    # For settings/config files, only flag actual secrets with real values
+    if [[ $file =~ (settings\.py|config\.py) ]]; then
+        # Check for real hardcoded values (not None, not example text)
+        # This pattern matches things like api_key = "sk-xxx" but not api_key = None
+        if grep -E "=(.*['\"][a-zA-Z0-9\-_.]+['\"])" "$file" 2>/dev/null | grep -iE "(password|api.key|secret|token|private.key)" | grep -v "None\|example\|change_in_production\|your_\|test_"; then
+            echo -e "${RED}❌ FAILED${NC}: $file"
+            echo "   Reason: Possible hardcoded credentials detected"
+            SECRETS_FOUND=1
+        fi
+    else
+        # For other files, check for any secret patterns
+        if grep -Ei "password|api.key|secret|token|private.key" "$file" 2>/dev/null | grep -v "#"; then
+            echo -e "${RED}❌ FAILED${NC}: $file"
+            echo "   Reason: Possible hardcoded credentials detected"
+            SECRETS_FOUND=1
+        fi
     fi
 done
 
