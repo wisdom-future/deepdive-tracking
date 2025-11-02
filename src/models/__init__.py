@@ -26,6 +26,7 @@ from src.models.publishing import (
     PublishedContent,
     PublishingSchedule,
     publishing_schedule_content,
+    PublishPriority,
 )
 
 # Channel models
@@ -55,6 +56,7 @@ __all__ = [
     "PublishedContent",
     "PublishingSchedule",
     "publishing_schedule_content",
+    "PublishPriority",
     # Channels
     "WeChatMediaCache",
     "ChannelConfig",
