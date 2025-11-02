@@ -9,6 +9,11 @@ from src.api.v1.schemas.news import (
     NewsListResponse,
     CollectionStatsResponse,
 )
+from src.api.v1.schemas.processed_news import (
+    ProcessingResponse,
+    ProcessingRequest,
+    BatchProcessingRequest,
+)
 
 __all__ = [
     "NewsItemBase",
@@ -18,4 +23,7 @@ __all__ = [
     "NewsItemDetailResponse",
     "NewsListResponse",
     "CollectionStatsResponse",
+    "ProcessingResponse",
+    "ProcessingRequest",
+    "BatchProcessingRequest",
 ]

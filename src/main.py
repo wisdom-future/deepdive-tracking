@@ -7,7 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from src import __version__
 from src.config import get_settings
-from src.api.v1.endpoints import news
+from src.api.v1.endpoints import news, processed_news, statistics
 
 
 def create_app() -> FastAPI:
@@ -57,7 +57,9 @@ def create_app() -> FastAPI:
         return {"message": "Welcome to DeepDive Tracking API"}
 
     # Include API routers
-    app.include_router(news.router)
+    app.include_router(news.router, prefix="/api/v1")
+    app.include_router(processed_news.router, prefix="/api/v1")
+    app.include_router(statistics.router, prefix="/api/v1")
 
     return app
 
