@@ -4,6 +4,8 @@
 
 使用方法:
     python scripts/test-real-api.py
+    # 或从项目根目录
+    cd deepdive-tracking && python scripts/test-real-api.py
 
 这个脚本会:
 1. 验证 OpenAI API 配置
@@ -15,7 +17,13 @@
 
 import asyncio
 import sys
+import os
 from datetime import datetime
+from pathlib import Path
+
+# 添加项目根目录到 Python 路径
+project_root = Path(__file__).parent.parent
+sys.path.insert(0, str(project_root))
 
 try:
     from sqlalchemy import create_engine
@@ -24,10 +32,16 @@ except ImportError:
     print("❌ SQLAlchemy not installed. Run: pip install -r requirements.txt")
     sys.exit(1)
 
-from src.config.settings import Settings
-from src.models.base import Base
-from src.models import DataSource, RawNews
-from src.services.ai import ScoringService
+try:
+    from src.config.settings import Settings
+    from src.models.base import Base
+    from src.models import DataSource, RawNews
+    from src.services.ai import ScoringService
+except ImportError as e:
+    print(f"❌ Error importing modules: {str(e)}")
+    print(f"Project root: {project_root}")
+    print(f"Python path: {sys.path[:3]}")
+    sys.exit(1)
 
 
 async def main():
