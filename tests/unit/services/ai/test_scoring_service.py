@@ -65,10 +65,10 @@ class TestScoringService:
     @pytest.mark.asyncio
     async def test_score_news_success(self, scoring_service, mock_raw_news):
         """Test successful news scoring."""
-        # Mock API response
-        mock_response = Mock()
-        mock_response.choices = [Mock()]
-        mock_response.choices[0].message.content = json.dumps({
+        # Mock scoring API response
+        mock_scoring_response = Mock()
+        mock_scoring_response.choices = [Mock()]
+        mock_scoring_response.choices[0].message.content = json.dumps({
             "score": 85,
             "score_reasoning": "GPT-4o is a major breakthrough",
             "category": "tech_breakthrough",
@@ -79,7 +79,7 @@ class TestScoringService:
                 "50% faster than GPT-4",
                 "Lower cost"
             ],
-            "keywords": ["GPT-4o", "OpenAI", "AI", "Model"],
+            "keywords": ["GPT-4o", "OpenAI", "AI", "Model", "release"],
             "entities": {
                 "companies": ["OpenAI"],
                 "technologies": ["GPT-4o", "Transformer"],
@@ -87,10 +87,33 @@ class TestScoringService:
             },
             "impact_analysis": "Will significantly impact AI industry"
         })
-        mock_response.usage.prompt_tokens = 500
-        mock_response.usage.completion_tokens = 300
+        mock_scoring_response.usage.prompt_tokens = 500
+        mock_scoring_response.usage.completion_tokens = 300
 
-        scoring_service.client.chat.completions.create.return_value = mock_response
+        # Mock professional summary response
+        mock_summary_pro = Mock()
+        mock_summary_pro.choices = [Mock()]
+        mock_summary_pro.choices[0].message.content = json.dumps({
+            "summary_pro": "GPT-4o is a major multimodal breakthrough offering 50% faster performance and lower costs than GPT-4. It enables simultaneous processing of text, speech, and visual data. This achievement represents a significant milestone in AI development with broad implications."
+        })
+        mock_summary_pro.usage.prompt_tokens = 200
+        mock_summary_pro.usage.completion_tokens = 100
+
+        # Mock scientific summary response
+        mock_summary_sci = Mock()
+        mock_summary_sci.choices = [Mock()]
+        mock_summary_sci.choices[0].message.content = json.dumps({
+            "summary_sci": "GPT-4o is an advanced AI model that understands text, images, and audio together. It works faster and costs less than previous versions. This breakthrough makes powerful AI technology more accessible for solving real-world problems."
+        })
+        mock_summary_sci.usage.prompt_tokens = 200
+        mock_summary_sci.usage.completion_tokens = 100
+
+        # Set up side effects to return different responses
+        scoring_service.client.chat.completions.create.side_effect = [
+            mock_scoring_response,
+            mock_summary_pro,  # Professional summary
+            mock_summary_sci,  # Scientific summary
+        ]
 
         # Execute
         result = await scoring_service.score_news(mock_raw_news)
@@ -102,6 +125,8 @@ class TestScoringService:
         assert len(result.scoring.key_points) == 3
         assert result.metadata.cost > 0
         assert result.metadata.processing_time_ms > 0
+        assert len(result.summaries.summary_pro) > 0
+        assert len(result.summaries.summary_sci) > 0
 
     @pytest.mark.asyncio
     async def test_score_news_invalid_json(self, scoring_service, mock_raw_news):
@@ -114,7 +139,7 @@ class TestScoringService:
         scoring_service.client.chat.completions.create.return_value = mock_response
 
         # Execute and verify exception
-        with pytest.raises(ValueError, match="Invalid API response format"):
+        with pytest.raises(ValueError, match="API returned invalid JSON"):
             await scoring_service.score_news(mock_raw_news)
 
     @pytest.mark.asyncio
@@ -123,17 +148,17 @@ class TestScoringService:
         # Create multiple mock news
         news_list = [mock_raw_news] * 3
 
-        # Mock scoring for each
-        mock_response = Mock()
-        mock_response.choices = [Mock()]
-        mock_response.choices[0].message.content = json.dumps({
+        # Mock scoring response
+        mock_scoring_response = Mock()
+        mock_scoring_response.choices = [Mock()]
+        mock_scoring_response.choices[0].message.content = json.dumps({
             "score": 75,
             "score_reasoning": "Important news",
             "category": "company_news",
             "sub_categories": [],
             "confidence": 0.8,
             "key_points": ["Point 1", "Point 2", "Point 3"],
-            "keywords": ["tech", "news", "ai", "model"],
+            "keywords": ["tech", "news", "ai", "model", "innovation"],
             "entities": {
                 "companies": ["Company"],
                 "technologies": ["Tech"],
@@ -141,10 +166,32 @@ class TestScoringService:
             },
             "impact_analysis": "Some impact"
         })
-        mock_response.usage.prompt_tokens = 400
-        mock_response.usage.completion_tokens = 200
+        mock_scoring_response.usage.prompt_tokens = 400
+        mock_scoring_response.usage.completion_tokens = 200
 
-        scoring_service.client.chat.completions.create.return_value = mock_response
+        # Mock summary responses
+        mock_summary_pro = Mock()
+        mock_summary_pro.choices = [Mock()]
+        mock_summary_pro.choices[0].message.content = json.dumps({
+            "summary_pro": "Technical summary highlighting key developments and strategic implications for industry decision makers. Details the impact on technology advancement and competitive landscape. Suitable for professional understanding of importance."
+        })
+        mock_summary_pro.usage.prompt_tokens = 200
+        mock_summary_pro.usage.completion_tokens = 100
+
+        mock_summary_sci = Mock()
+        mock_summary_sci.choices = [Mock()]
+        mock_summary_sci.choices[0].message.content = json.dumps({
+            "summary_sci": "Clear explanation in simple language for general audiences. Explains what happened and why it matters. Great for understanding news without technical background knowledge."
+        })
+        mock_summary_sci.usage.prompt_tokens = 200
+        mock_summary_sci.usage.completion_tokens = 100
+
+        # Set up to return responses in sequence: scoring, summary_pro, summary_sci (repeated for each news)
+        responses = []
+        for _ in range(len(news_list)):
+            responses.extend([mock_scoring_response, mock_summary_pro, mock_summary_sci])
+
+        scoring_service.client.chat.completions.create.side_effect = responses
 
         # Execute
         results, errors = await scoring_service.batch_score(news_list)
@@ -159,17 +206,17 @@ class TestScoringService:
         """Test batch scoring with some failures."""
         news_list = [mock_raw_news] * 2
 
-        # Mock first call fails, second succeeds
-        mock_response = Mock()
-        mock_response.choices = [Mock()]
-        mock_response.choices[0].message.content = json.dumps({
+        # Mock scoring response
+        mock_scoring_response = Mock()
+        mock_scoring_response.choices = [Mock()]
+        mock_scoring_response.choices[0].message.content = json.dumps({
             "score": 80,
             "score_reasoning": "Good",
             "category": "applications",
             "sub_categories": [],
             "confidence": 0.85,
             "key_points": ["P1", "P2", "P3"],
-            "keywords": ["a", "b", "c", "d"],
+            "keywords": ["a", "b", "c", "d", "e"],
             "entities": {
                 "companies": [],
                 "technologies": [],
@@ -177,13 +224,32 @@ class TestScoringService:
             },
             "impact_analysis": "Impact"
         })
-        mock_response.usage.prompt_tokens = 300
-        mock_response.usage.completion_tokens = 150
+        mock_scoring_response.usage.prompt_tokens = 300
+        mock_scoring_response.usage.completion_tokens = 150
 
-        # First call raises error, second succeeds
+        # Mock summary responses
+        mock_summary_pro = Mock()
+        mock_summary_pro.choices = [Mock()]
+        mock_summary_pro.choices[0].message.content = json.dumps({
+            "summary_pro": "Professional technical summary for industry experts and decision makers highlighting strategic importance and technology implications for future development."
+        })
+        mock_summary_pro.usage.prompt_tokens = 200
+        mock_summary_pro.usage.completion_tokens = 100
+
+        mock_summary_sci = Mock()
+        mock_summary_sci.choices = [Mock()]
+        mock_summary_sci.choices[0].message.content = json.dumps({
+            "summary_sci": "Easy-to-understand summary for general public explaining what happened and its practical value without technical jargon or complexity."
+        })
+        mock_summary_sci.usage.prompt_tokens = 200
+        mock_summary_sci.usage.completion_tokens = 100
+
+        # First news item fails on first call, second succeeds
         scoring_service.client.chat.completions.create.side_effect = [
             Exception("API Error"),
-            mock_response
+            mock_scoring_response,  # Second news: scoring
+            mock_summary_pro,  # Second news: summary_pro
+            mock_summary_sci,  # Second news: summary_sci
         ]
 
         # Execute
@@ -194,23 +260,24 @@ class TestScoringService:
         # Verify
         assert len(results) == 1
         assert len(errors) == 1
-        assert errors[0]["error"] == "API Error"
+        assert "API Error" in errors[0]["error"]
 
-    def test_save_to_database(
+    @pytest.mark.asyncio
+    async def test_save_to_database(
         self, scoring_service, mock_raw_news, mock_db_session
     ):
         """Test saving scoring result to database."""
         # Create a valid scoring result
-        mock_response = Mock()
-        mock_response.choices = [Mock()]
-        mock_response.choices[0].message.content = json.dumps({
+        mock_scoring_response = Mock()
+        mock_scoring_response.choices = [Mock()]
+        mock_scoring_response.choices[0].message.content = json.dumps({
             "score": 90,
             "score_reasoning": "Major breakthrough",
             "category": "tech_breakthrough",
             "sub_categories": [],
             "confidence": 0.92,
             "key_points": ["K1", "K2", "K3"],
-            "keywords": ["kw1", "kw2", "kw3", "kw4"],
+            "keywords": ["kw1", "kw2", "kw3", "kw4", "kw5"],
             "entities": {
                 "companies": ["OpenAI"],
                 "technologies": ["GPT-4o"],
@@ -218,17 +285,38 @@ class TestScoringService:
             },
             "impact_analysis": "Significant"
         })
-        mock_response.usage.prompt_tokens = 500
-        mock_response.usage.completion_tokens = 300
+        mock_scoring_response.usage.prompt_tokens = 500
+        mock_scoring_response.usage.completion_tokens = 300
 
-        scoring_service.client.chat.completions.create.return_value = mock_response
+        # Mock professional summary response
+        mock_summary_pro = Mock()
+        mock_summary_pro.choices = [Mock()]
+        mock_summary_pro.choices[0].message.content = json.dumps({
+            "summary_pro": "Major AI breakthrough with significant industry implications. Advances model capabilities and performance. This milestone will accelerate innovation across technology sectors."
+        })
+        mock_summary_pro.usage.prompt_tokens = 200
+        mock_summary_pro.usage.completion_tokens = 100
+
+        # Mock scientific summary response
+        mock_summary_sci = Mock()
+        mock_summary_sci.choices = [Mock()]
+        mock_summary_sci.choices[0].message.content = json.dumps({
+            "summary_sci": "New AI advancement makes technology more powerful and accessible. This progress enables solving real-world problems. Benefits expected across industries."
+        })
+        mock_summary_sci.usage.prompt_tokens = 200
+        mock_summary_sci.usage.completion_tokens = 100
+
+        scoring_service.client.chat.completions.create.side_effect = [
+            mock_scoring_response,
+            mock_summary_pro,  # Professional summary
+            mock_summary_sci,  # Scientific summary
+        ]
 
         # Create scoring result
-        import asyncio
-        result = asyncio.run(scoring_service.score_news(mock_raw_news))
+        result = await scoring_service.score_news(mock_raw_news)
 
         # Save to database
-        processed = scoring_service.save_to_database(mock_raw_news, result)
+        processed = await scoring_service.save_to_database(mock_raw_news, result)
 
         # Verify database calls
         assert mock_db_session.add.called

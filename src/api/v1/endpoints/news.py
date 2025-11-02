@@ -14,7 +14,7 @@ from src.api.v1.schemas.news import (
 )
 from src.models import RawNews, ProcessedNews
 
-router = APIRouter(prefix="/api/v1/news", tags=["news"])
+router = APIRouter(prefix="/news", tags=["news"])
 
 
 @router.get(

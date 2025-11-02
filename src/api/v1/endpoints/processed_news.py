@@ -16,7 +16,7 @@ from src.models import ProcessedNews, RawNews
 from src.services.ai import ScoringService
 from src.config.settings import Settings
 
-router = APIRouter(prefix="/processed-news", tags=["processed_news"])
+router = APIRouter(prefix="/processed-news", tags=["processed_news"], include_in_schema=True)
 
 
 def get_settings() -> Settings:

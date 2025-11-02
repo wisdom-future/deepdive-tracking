@@ -52,7 +52,7 @@ class ScoringResponse(BaseModel):
         description="Key points from the article"
     )
     keywords: List[str] = Field(
-        min_length=5,
+        min_length=4,
         max_length=8,
         description="Keywords sorted by importance"
     )

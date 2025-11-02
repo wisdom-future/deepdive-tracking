@@ -10,23 +10,6 @@ from src.database import SessionLocal
 from src.models import DataSource, RawNews, ProcessedNews
 
 
-@pytest.fixture
-def client(test_session: Session):
-    """Create test client with test database."""
-    app = create_app()
-
-    # Override dependency to use test session
-    from src.api.v1.dependencies import get_db
-
-    def override_get_db():
-        return test_session
-
-    app.dependency_overrides[get_db] = override_get_db
-
-    with TestClient(app) as client:
-        yield client
-
-    app.dependency_overrides.clear()
 
 
 class TestNewsEndpoints:
