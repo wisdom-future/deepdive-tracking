@@ -6,7 +6,7 @@ from typing import Optional, List, Dict, Any
 from sqlalchemy.orm import Session
 
 from src.models import PublishedContent, ProcessedNews, ContentReview, RawNews
-from src.services.channels.wechat_channel import WeChatPublisher
+from src.services.channels.wechat import WeChatPublisher
 
 logger = logging.getLogger(__name__)
 

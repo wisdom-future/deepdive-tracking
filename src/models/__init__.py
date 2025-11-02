@@ -11,6 +11,7 @@ from src.models.publishing_schedule import PublishingSchedule
 from src.models.publishing_schedule_content import publishing_schedule_content
 from src.models.cost_log import CostLog
 from src.models.operation_log import OperationLog
+from src.models.wechat_media_cache import WeChatMediaCache
 
 __all__ = [
     "Base",
@@ -24,4 +25,5 @@ __all__ = [
     "publishing_schedule_content",
     "CostLog",
     "OperationLog",
+    "WeChatMediaCache",
 ]
