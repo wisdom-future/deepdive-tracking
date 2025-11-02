@@ -12,14 +12,18 @@ echo ""
 # Ensure hooks directory exists
 mkdir -p "$HOOKS_DIR"
 
-# Make hooks executable
+# Copy hooks from tracked location and make executable
 for hook in pre-commit prepare-commit-msg commit-msg; do
+    source_file="$PROJECT_ROOT/.claude/hooks/$hook"
     hook_file="$HOOKS_DIR/$hook"
-    if [ -f "$hook_file" ]; then
+
+    if [ -f "$source_file" ]; then
+        cp "$source_file" "$hook_file"
         chmod +x "$hook_file"
         echo "✅ $hook hook installed and made executable"
     else
-        echo "⚠️  $hook hook not found in .git/hooks"
+        echo "❌ $hook hook not found in .claude/hooks"
+        exit 1
     fi
 done
 
