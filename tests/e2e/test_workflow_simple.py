@@ -72,6 +72,8 @@ def main():
     print(f"配置: 处理 {num_articles} 篇文章\n")
 
     # 初始化数据库
+    # 清除 get_settings 的缓存以确保从 .env 重新读取
+    get_settings.cache_clear()
     settings = get_settings()
     engine = create_engine(settings.database_url, echo=False)
     Session = sessionmaker(bind=engine)
@@ -231,9 +233,9 @@ def main():
         # ===== 步骤 5: 微信发布 =====
         print_step(5, "微信发布 (WeChat Publishing)")
 
-        # 检查 WeChat 凭证
-        wechat_app_id = os.getenv('WECHAT_APP_ID')
-        wechat_app_secret = os.getenv('WECHAT_APP_SECRET')
+        # 检查 WeChat 凭证 - 从settings读取而不是环境变量
+        wechat_app_id = settings.wechat_app_id
+        wechat_app_secret = settings.wechat_app_secret
 
         if not wechat_app_id or not wechat_app_secret:
             print("  ⚠️  WeChat 凭证未配置")
