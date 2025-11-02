@@ -21,7 +21,7 @@ class Settings(BaseSettings):
     api_version: str = "v1"
 
     # Database
-    database_url: str = "postgresql://deepdive:deepdive_password@localhost:5432/deepdive_db"
+    database_url: str = "sqlite:///./deepdive_tracking.db"
     database_pool_size: int = 10
     database_max_overflow: int = 20
     database_pool_timeout: int = 30

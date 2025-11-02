@@ -49,8 +49,9 @@ async def main():
         )
 
         # 测试连接
+        from sqlalchemy import text
         with engine.connect() as conn:
-            conn.execute("SELECT 1")
+            conn.execute(text("SELECT 1"))
 
         print(f"    OK - Connected to {settings.database_url}")
     except Exception as e:
