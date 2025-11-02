@@ -25,7 +25,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from src.config import get_settings
 from src.models import ProcessedNews, ContentReview, RawNews
-from src.services.review_service import ReviewService
+from src.services.workflow.auto_review_workflow import AutoReviewWorkflow
 
 def main():
     """Main test function"""
@@ -65,19 +65,19 @@ def main():
         print(f"    找到 {len(pending_reviews)} 条待审核的文章")
         print()
 
-        # [2] 初始化审核服务
-        print("[2] 初始化审核服务...")
-        review_service = ReviewService(session)
-        print("    OK - 服务就绪")
+        # [2] 初始化工作流
+        print("[2] 初始化自动审核工作流...")
+        workflow = AutoReviewWorkflow(session)
+        print("    OK - 工作流就绪")
         print()
 
-        # [3] 执行自动审核
-        print("[3] 执行自动审核...")
+        # [3] 执行自动审核工作流
+        print("[3] 执行自动审核工作流...")
         print("    配置: score_threshold=50, max_reviews=100")
         print()
 
         start_time = datetime.utcnow()
-        approved_count, skipped_count = review_service.auto_approve_reviews(
+        result = workflow.execute(
             score_threshold=50,
             max_reviews=100
         )
@@ -87,17 +87,23 @@ def main():
         print()
 
         # [4] 显示自动审核结果
-        print("[4] 自动审核结果")
+        print("[4] 工作流执行结果")
         print("="*80)
-        print(f"  自动批准: {approved_count}")
-        print(f"  跳过处理: {skipped_count}")
-        print(f"  处理时间: {duration:.2f}秒")
+        if result['success']:
+            print(f"  ✅ 执行成功")
+            print(f"  自动批准: {result['approved_count']}")
+            print(f"  跳过处理: {result['skipped_count']}")
+            print(f"  处理时间: {duration:.2f}秒")
+        else:
+            print(f"  ❌ 执行失败")
+            print(f"  错误: {result.get('error', 'Unknown error')}")
+            return 1
         print()
 
         # [5] 获取审核统计
         print("[5] 审核统计")
         print("="*80)
-        stats = review_service.get_review_stats()
+        stats = result['stats']
         print(f"  总审核数: {stats['total']}")
         print(f"  待审核: {stats['pending']}")
         print(f"  已批准: {stats['approved']}")
