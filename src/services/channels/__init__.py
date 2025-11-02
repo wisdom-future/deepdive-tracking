@@ -21,5 +21,8 @@ Each channel can be developed and tested independently.
 """
 
 from src.services.channels.wechat import WeChatPublisher
+from src.services.channels.github import GitHubPublisher
+from src.services.channels.email import EmailPublisher
+from src.services.channels.channel_manager import ChannelManager
 
-__all__ = ["WeChatPublisher"]
+__all__ = ["WeChatPublisher", "GitHubPublisher", "EmailPublisher", "ChannelManager"]

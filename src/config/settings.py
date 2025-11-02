@@ -52,10 +52,25 @@ class Settings(BaseSettings):
     max_content_length: int = 100000
     similarity_threshold: float = 0.8
 
-    # Publishing Channels
+    # Publishing Channels - WeChat
     wechat_api_url: Optional[str] = None
     wechat_app_id: Optional[str] = None
     wechat_app_secret: Optional[str] = None
+
+    # Publishing Channels - GitHub
+    github_token: Optional[str] = None
+    github_repo: Optional[str] = None
+    github_username: Optional[str] = None
+    github_local_path: Optional[str] = None
+
+    # Publishing Channels - Email
+    smtp_host: Optional[str] = None
+    smtp_port: int = 587
+    smtp_user: Optional[str] = None
+    smtp_password: Optional[str] = None
+    smtp_from_email: Optional[str] = None
+    smtp_from_name: str = "DeepDive Tracking"
+    email_list: Optional[list] = None
 
     xiaohongshu_api_url: Optional[str] = None
     xiaohongshu_token: Optional[str] = None

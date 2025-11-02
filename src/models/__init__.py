@@ -29,7 +29,14 @@ from src.models.publishing import (
 )
 
 # Channel models
-from src.models.channels import WeChatMediaCache
+from src.models.channels import (
+    WeChatMediaCache,
+    ChannelConfig,
+    WeChatChannelConfig,
+    GitHubChannelConfig,
+    EmailChannelConfig,
+    EmailConfig
+)
 
 # Logging models
 from src.models.logging import CostLog, OperationLog
@@ -50,6 +57,11 @@ __all__ = [
     "publishing_schedule_content",
     # Channels
     "WeChatMediaCache",
+    "ChannelConfig",
+    "WeChatChannelConfig",
+    "GitHubChannelConfig",
+    "EmailChannelConfig",
+    "EmailConfig",
     # Logging
     "CostLog",
     "OperationLog",
