@@ -31,10 +31,9 @@ RUN pip install --no-cache-dir \
     beautifulsoup4==4.12.2 \
     lxml==4.9.4 \
     python-dotenv==1.0.0 \
-    aiohttp==3.9.1 \
-    alembic==1.13.1 \
-    simhash==1.4.5 \
-    jinja2==3.1.2
+    aiohttp \
+    alembic \
+    simhash
 
 # Expose port 8080 (Cloud Run standard)
 EXPOSE 8080
