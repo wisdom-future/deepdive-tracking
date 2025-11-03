@@ -208,3 +208,30 @@ def get_session():
     if _SessionLocal is None:
         _init_db()
     return SessionLocal()
+
+
+def get_database_url() -> str:
+    """Get the database URL for Alembic migrations.
+
+    For Cloud SQL Connector environments, we need to construct a proper URL.
+    For direct connections, we use the configured URL directly.
+
+    Returns:
+        str: Database URL suitable for SQLAlchemy
+    """
+    settings = get_settings()
+
+    # Check if running in Cloud Run with Cloud SQL Connector
+    is_cloud_run = os.getenv("K_SERVICE") or os.getenv("CLOUD_RUN")
+    looks_like_cloud_sql_socket = settings.database_url and "@/" in settings.database_url
+
+    if is_cloud_run or looks_like_cloud_sql_socket:
+        # For Cloud SQL Connector, we create a special URL that indicates
+        # we're using the connector (environment variables will handle actual connection)
+        # We use a dummy URL but Alembic will process via env.py which uses our engine
+        db_user = os.getenv("CLOUDSQL_USER", "deepdive_user")
+        db_name = os.getenv("CLOUDSQL_DATABASE", "deepdive_db")
+        return f"postgresql+pg8000://{db_user}@/deepdive-engine:asia-east1:deepdive-db/{db_name}"
+    else:
+        # For direct connections, use the configured URL
+        return settings.database_url

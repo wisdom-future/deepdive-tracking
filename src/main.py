@@ -78,16 +78,24 @@ def create_app() -> FastAPI:
 
         try:
             # Ensure the database connection is initialized (uses Cloud SQL Connector in Cloud Run)
-            from src.database.connection import _init_db, get_database_url
+            from src.database.connection import _init_db, _engine
+            from alembic.config import Config
+            from alembic import command
+
             _init_db()
             logger.info("Database connection initialized via Cloud SQL Connector")
 
-            # Get database URL from our connection config
-            db_url = get_database_url()
-            logger.info(f"Using database URL: {db_url.split('@')[1] if '@' in db_url else 'local'}")
+            if _engine is None:
+                logger.error("Failed to initialize database engine")
+                return {
+                    "status": "error",
+                    "message": "Failed to initialize database engine",
+                    "timestamp": datetime.now().isoformat()
+                }
 
             # Get project root directory
             project_root = Path(__file__).parent.parent
+            alembic_dir = project_root / "alembic"
             alembic_ini = project_root / "alembic.ini"
 
             if not alembic_ini.exists():
@@ -98,52 +106,26 @@ def create_app() -> FastAPI:
                     "timestamp": datetime.now().isoformat()
                 }
 
-            logger.info(f"Running Alembic migrations with database URL...")
+            logger.info(f"Running Alembic migrations via Python API...")
 
-            # Set environment variable for Alembic to use
-            env = os.environ.copy()
-            env["SQLALCHEMY_DATABASE_URL"] = db_url
+            # Load Alembic configuration
+            alembic_cfg = Config(str(alembic_ini))
+            alembic_cfg.set_main_option("script_location", str(alembic_dir))
 
-            # Run alembic upgrade head with the correct database URL
-            result = subprocess.run(
-                ["alembic", "upgrade", "head"],
-                cwd=str(project_root),
-                capture_output=True,
-                text=True,
-                timeout=120,
-                env=env
-            )
+            # Run alembic upgrade head using the configured engine
+            # This avoids the need to subprocess and uses Cloud SQL Connector directly
+            with _engine.begin() as connection:
+                alembic_cfg.attributes["connection"] = connection
+                logger.info("Applying pending migrations...")
+                command.upgrade(alembic_cfg, "head")
+                logger.info("Migrations applied successfully")
 
-            logger.info(f"Alembic exit code: {result.returncode}")
-            logger.debug(f"Alembic stdout: {result.stdout}")
-            if result.stderr:
-                logger.debug(f"Alembic stderr: {result.stderr}")
-
-            if result.returncode == 0:
-                logger.info("Database migrations applied successfully")
-                return {
-                    "status": "success",
-                    "message": "Database tables initialized and all migrations applied successfully",
-                    "migrations_output": result.stdout,
-                    "timestamp": datetime.now().isoformat()
-                }
-            else:
-                error_msg = result.stderr or result.stdout or "Unknown error"
-                logger.error(f"Alembic migration failed: {error_msg}")
-                return {
-                    "status": "error",
-                    "message": f"Alembic migration failed: {error_msg}",
-                    "migrations_output": result.stdout,
-                    "timestamp": datetime.now().isoformat()
-                }
-
-        except subprocess.TimeoutExpired:
-            logger.error("Alembic migration timeout (exceeded 120 seconds)")
             return {
-                "status": "error",
-                "message": "Alembic migration timeout (exceeded 120 seconds)",
+                "status": "success",
+                "message": "Database tables initialized and all migrations applied successfully",
                 "timestamp": datetime.now().isoformat()
             }
+
         except Exception as e:
             logger.error(f"Database initialization failed: {e}", exc_info=True)
             return {
