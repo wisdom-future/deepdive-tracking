@@ -188,6 +188,49 @@ def create_app() -> FastAPI:
                 "timestamp": datetime.now().isoformat()
             }
 
+    @app.post("/test-email")
+    async def test_email() -> dict:
+        """Test email sending functionality.
+
+        Returns:
+            dict: Email test status.
+        """
+        logger = logging.getLogger(__name__)
+        logger.info("Email test request received")
+
+        try:
+            # Run the email sending script
+            project_root = Path(__file__).parent.parent
+            email_script = project_root / "scripts" / "publish" / "send_top_news_email.py"
+
+            logger.info(f"Executing email script: {email_script}")
+
+            result = subprocess.run(
+                ["python", str(email_script)],
+                capture_output=True,
+                text=True,
+                timeout=60,
+                cwd=str(project_root)
+            )
+
+            logger.info(f"Email script exit code: {result.returncode}")
+
+            return {
+                "status": "success" if result.returncode == 0 else "failed",
+                "exit_code": result.returncode,
+                "stdout": result.stdout,
+                "stderr": result.stderr,
+                "timestamp": datetime.now().isoformat()
+            }
+
+        except Exception as e:
+            logger.error(f"Email test failed: {e}", exc_info=True)
+            return {
+                "status": "error",
+                "message": str(e),
+                "timestamp": datetime.now().isoformat()
+            }
+
     # Include API routers
     app.include_router(news.router, prefix="/api/v1")
     app.include_router(processed_news.router, prefix="/api/v1")
