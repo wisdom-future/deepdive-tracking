@@ -18,8 +18,6 @@ import asyncio
 import sys
 from pathlib import Path
 from datetime import datetime
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
 
 # 添加项目路径 (从 scripts/01-collection/ 上升到项目根目录)
 project_root = Path(__file__).parent.parent.parent
@@ -29,6 +27,7 @@ from src.config import get_settings
 from src.models.base import Base
 from src.models import DataSource, RawNews
 from src.services.collection import CollectionManager
+from src.database.connection import get_session
 
 
 async def main():
@@ -39,33 +38,24 @@ async def main():
     print("DeepDive Tracking - Real Data Collection")
     print("=" * 80)
 
-    # 1. 连接数据库
+    # 1. 连接数据库 (使用 Cloud SQL Connector 代理模式)
     print("\n[1] 连接到PostgreSQL数据库...")
     try:
-        engine = create_engine(
-            settings.database_url,
-            echo=False,
-            pool_size=10,
-            max_overflow=20
-        )
+        session = get_session()
 
         # 测试连接
         from sqlalchemy import text
-        with engine.connect() as conn:
-            conn.execute(text("SELECT 1"))
+        with session.begin_nested():
+            session.execute(text("SELECT 1"))
 
-        print(f"    OK - Connected to {settings.database_url}")
+        print(f"    OK - Connected to database (via Cloud SQL Connector)")
     except Exception as e:
         print(f"    ERROR - 无法连接数据库: {e}")
         print("\n    请确保:")
-        print("    1. PostgreSQL 已启动: docker-compose up -d")
-        print("    2. 数据库迁移已完成: alembic upgrade head")
-        print("    3. 环境变量正确设置")
+        print("    1. 环境变量正确设置")
+        print("    2. Cloud SQL Connector 可用")
+        print("    3. 数据库迁移已完成")
         return
-
-    # 2. 创建会话
-    Session = sessionmaker(bind=engine)
-    session = Session()
 
     try:
         # 3. 检查数据源配置

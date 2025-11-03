@@ -188,6 +188,51 @@ def create_app() -> FastAPI:
                 "timestamp": datetime.now().isoformat()
             }
 
+    @app.get("/diagnose/database")
+    async def diagnose_database() -> dict:
+        """Diagnostic endpoint to check database status and data.
+
+        Returns:
+            dict: Database diagnostics including record counts and table status.
+        """
+        logger = logging.getLogger(__name__)
+        logger.info("Database diagnostic request received")
+
+        try:
+            from src.database.connection import get_session
+            from src.models import RawNews, ProcessedNews
+
+            session = get_session()
+
+            # Count records in each table
+            raw_count = session.query(RawNews).count()
+            processed_count = session.query(ProcessedNews).count()
+
+            session.close()
+
+            issues = []
+            if raw_count == 0:
+                issues.append("No raw news data in database")
+            if processed_count == 0:
+                issues.append("No processed news data in database")
+
+            return {
+                "status": "success",
+                "raw_news_count": raw_count,
+                "processed_news_count": processed_count,
+                "has_data": raw_count > 0 and processed_count > 0,
+                "issues": issues,
+                "timestamp": datetime.now().isoformat()
+            }
+
+        except Exception as e:
+            logger.error(f"Database diagnostic failed: {e}", exc_info=True)
+            return {
+                "status": "error",
+                "message": str(e),
+                "timestamp": datetime.now().isoformat()
+            }
+
     @app.post("/test-email")
     async def test_email() -> dict:
         """Test email sending functionality.
