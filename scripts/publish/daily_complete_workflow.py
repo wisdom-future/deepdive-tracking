@@ -202,7 +202,7 @@ class DailyWorkflow:
 
         # Step 4: 发布到 GitHub
         if not self.run_command(
-            "python scripts/publish/test_github_publish.py",
+            "python scripts/publish/send_top_ai_news_to_github.py",
             "GitHub",
             "发布到 GitHub 仓库（批量汇总页面）"
         ):
