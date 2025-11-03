@@ -63,9 +63,9 @@ def create_app() -> FastAPI:
 
     @app.post("/init-db")
     async def init_database() -> dict:
-        """Initialize database tables (runs alembic migrations).
+        """Initialize database tables using Alembic migrations.
 
-        This endpoint runs alembic upgrade head to create all required tables.
+        This endpoint runs alembic upgrade head to apply all pending migrations.
         Safe to call multiple times - alembic tracks applied migrations.
 
         Uses Cloud SQL Connector in Cloud Run for secure database access.
@@ -78,27 +78,61 @@ def create_app() -> FastAPI:
 
         try:
             # Ensure the database connection is initialized (uses Cloud SQL Connector in Cloud Run)
-            from src.database.connection import _init_db, _engine
+            from src.database.connection import _init_db
             _init_db()
             logger.info("Database connection initialized via Cloud SQL Connector")
 
-            # Use SQLAlchemy to create tables directly instead of Alembic
-            # This works with Cloud SQL Connector since we already have an initialized engine
-            from src.models import Base
+            # Get project root directory
+            project_root = Path(__file__).parent.parent
+            alembic_dir = project_root / "alembic"
 
-            logger.info("Creating database tables using SQLAlchemy...")
+            if not alembic_dir.exists():
+                logger.error(f"Alembic directory not found: {alembic_dir}")
+                return {
+                    "status": "error",
+                    "message": f"Alembic directory not found: {alembic_dir}",
+                    "timestamp": datetime.now().isoformat()
+                }
 
-            # Create all tables defined in the ORM models
-            Base.metadata.create_all(bind=_engine)
+            logger.info(f"Running Alembic migrations from {alembic_dir}...")
 
-            logger.info("Database tables created successfully")
+            # Run alembic upgrade head to apply all pending migrations
+            result = subprocess.run(
+                ["alembic", "upgrade", "head"],
+                cwd=str(project_root),
+                capture_output=True,
+                text=True,
+                timeout=120
+            )
 
+            logger.info(f"Alembic exit code: {result.returncode}")
+            logger.debug(f"Alembic stdout: {result.stdout}")
+
+            if result.returncode == 0:
+                logger.info("Database migrations applied successfully")
+                return {
+                    "status": "success",
+                    "message": "Database tables initialized and all migrations applied successfully",
+                    "migrations_output": result.stdout,
+                    "timestamp": datetime.now().isoformat()
+                }
+            else:
+                error_msg = result.stderr or result.stdout or "Unknown error"
+                logger.error(f"Alembic migration failed: {error_msg}")
+                return {
+                    "status": "error",
+                    "message": f"Alembic migration failed: {error_msg}",
+                    "migrations_output": result.stdout,
+                    "timestamp": datetime.now().isoformat()
+                }
+
+        except subprocess.TimeoutExpired:
+            logger.error("Alembic migration timeout (exceeded 120 seconds)")
             return {
-                "status": "success",
-                "message": "Database tables initialized successfully",
+                "status": "error",
+                "message": "Alembic migration timeout (exceeded 120 seconds)",
                 "timestamp": datetime.now().isoformat()
             }
-
         except Exception as e:
             logger.error(f"Database initialization failed: {e}", exc_info=True)
             return {
