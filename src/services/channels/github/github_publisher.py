@@ -472,85 +472,261 @@ class GitHubPublisher:
 </html>"""
 
     def _generate_batch_summary(self, batch_name: str, articles: List[Dict]) -> str:
-        """生成批次总结HTML"""
-        articles_html = "".join([
-            f"""
+        """
+        生成批次总结HTML - 卡片形式展示，类似邮件渠道
+
+        Args:
+            batch_name: 批次名称 (日期格式)
+            articles: 发布的文章列表
+        """
+        # 从 published articles 中提取元数据
+        cards_html = ""
+        for idx, article in enumerate(articles, 1):
+            filename = article.get('filename', '')
+            title = filename.replace('.html', '').replace('_', ' ')[:60] if filename else 'Unknown'
+            score = article.get('score', 0) or 0
+
+            # 评分徽章颜色
+            if score >= 80:
+                badge_bg = "#4caf50"  # 绿色
+            elif score >= 60:
+                badge_bg = "#2196f3"  # 蓝色
+            else:
+                badge_bg = "#ff9800"  # 橙色
+
+            cards_html += f"""
             <div class="article-card">
-                <h3><a href="../{article.get('filename', '')}">{html.escape(article.get('filename', 'Unknown')[:50])}</a></h3>
-                <p class="score">分数: {article.get('score', 0)}/100</p>
+                <div class="card-header">
+                    <h3><a href="articles/{filename}">{html.escape(title)}</a></h3>
+                    <div class="score-badge" style="background: {badge_bg};">{int(score)}</div>
+                </div>
+                <p class="article-meta">
+                    <span class="badge">AI 资讯</span>
+                </p>
+                <p class="article-summary">精选 AI 资讯内容...</p>
+                <a href="articles/{filename}" class="read-more">阅读全文 →</a>
             </div>
             """
-            for article in articles
-        ])
 
         return f"""<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>批次: {html.escape(batch_name)}</title>
+    <title>DeepDive 每日速览 - {html.escape(batch_name)}</title>
     <style>
-        body {{
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto;
-            background: #f5f5f5;
-            padding: 20px;
+        * {{
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
         }}
+
+        body {{
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Microsoft YaHei', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 40px 20px;
+        }}
+
         .container {{
             max-width: 900px;
             margin: 0 auto;
+        }}
+
+        .header {{
             background: white;
-            padding: 40px;
             border-radius: 10px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            padding: 40px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+            text-align: center;
         }}
-        h1 {{
+
+        .header h1 {{
+            font-size: 2em;
             color: #667eea;
-            border-bottom: 2px solid #667eea;
-            padding-bottom: 10px;
+            margin-bottom: 10px;
         }}
-        .article-card {{
-            padding: 15px;
-            margin: 10px 0;
-            background: #f9f9f9;
-            border-left: 4px solid #667eea;
-            border-radius: 5px;
-        }}
-        .article-card h3 {{
-            margin: 0 0 10px 0;
-        }}
-        .article-card a {{
-            color: #667eea;
-            text-decoration: none;
-        }}
-        .article-card a:hover {{
-            text-decoration: underline;
-        }}
-        .score {{
+
+        .header .date {{
             color: #666;
+            font-size: 1.1em;
+        }}
+
+        .header .stats {{
+            display: flex;
+            justify-content: center;
+            gap: 40px;
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+        }}
+
+        .stat-item {{
+            text-align: center;
+        }}
+
+        .stat-value {{
+            font-size: 1.8em;
+            font-weight: bold;
+            color: #667eea;
+        }}
+
+        .stat-label {{
             font-size: 0.9em;
+            color: #999;
+            margin-top: 5px;
+        }}
+
+        .articles {{
+            display: grid;
+            gap: 20px;
+        }}
+
+        .article-card {{
+            background: white;
+            border-radius: 10px;
+            padding: 25px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            border-left: 5px solid #667eea;
+            transition: all 0.3s ease;
+        }}
+
+        .article-card:hover {{
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+            transform: translateY(-2px);
+        }}
+
+        .card-header {{
+            display: flex;
+            justify-content: space-between;
+            align-items: start;
+            margin-bottom: 15px;
+            gap: 15px;
+        }}
+
+        .card-header h3 {{
+            flex: 1;
+            font-size: 1.2em;
+            color: #333;
             margin: 0;
         }}
-        .back-link {{
-            display: inline-block;
-            margin-top: 20px;
+
+        .card-header h3 a {{
             color: #667eea;
             text-decoration: none;
         }}
-        .back-link:hover {{
+
+        .card-header h3 a:hover {{
             text-decoration: underline;
+        }}
+
+        .score-badge {{
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            color: white;
+            font-weight: bold;
+            font-size: 1.2em;
+            flex-shrink: 0;
+        }}
+
+        .article-meta {{
+            margin-bottom: 12px;
+        }}
+
+        .badge {{
+            display: inline-block;
+            background: #e3f2fd;
+            color: #1976d2;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: 500;
+        }}
+
+        .article-summary {{
+            color: #666;
+            line-height: 1.6;
+            margin-bottom: 15px;
+            font-size: 0.95em;
+        }}
+
+        .read-more {{
+            display: inline-block;
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 500;
+            transition: color 0.3s;
+        }}
+
+        .read-more:hover {{
+            color: #764ba2;
+        }}
+
+        .footer {{
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            margin-top: 30px;
+            text-align: center;
+            color: #999;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }}
+
+        .footer a {{
+            color: #667eea;
+            text-decoration: none;
+        }}
+
+        @media (max-width: 600px) {{
+            .header {{
+                padding: 20px;
+            }}
+
+            .header h1 {{
+                font-size: 1.5em;
+            }}
+
+            .stats {{
+                gap: 20px;
+            }}
+
+            .card-header {{
+                flex-direction: column;
+                align-items: flex-start;
+            }}
+
+            .score-badge {{
+                align-self: flex-start;
+            }}
         }}
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>📅 批次: {html.escape(batch_name)}</h1>
-        <p>发布时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</p>
-        <p>文章数量: {len(articles)}</p>
+        <div class="header">
+            <h1>📰 DeepDive 每日速览</h1>
+            <div class="date">AI 资讯精选 · {html.escape(batch_name)}</div>
+            <div class="stats">
+                <div class="stat-item">
+                    <div class="stat-value">{len(articles)}</div>
+                    <div class="stat-label">篇精选资讯</div>
+                </div>
+            </div>
+        </div>
 
-        <h2>📚 文章列表</h2>
-        {articles_html}
+        <div class="articles">
+            {cards_html}
+        </div>
 
-        <a href="../index.html" class="back-link">← 返回首页</a>
+        <div class="footer">
+            <p>由 DeepDive Tracking 自动生成</p>
+            <p><a href="index.html">← 返回首页</a></p>
+        </div>
     </div>
 </body>
 </html>"""
