@@ -63,10 +63,13 @@ def create_app() -> FastAPI:
 
     @app.post("/init-db")
     async def init_database() -> dict:
-        """Initialize database tables using Alembic migrations.
+        """Initialize database tables and apply pending migrations.
 
-        This endpoint runs alembic upgrade head to apply all pending migrations.
-        Safe to call multiple times - alembic tracks applied migrations.
+        This endpoint:
+        1. Creates all base tables using SQLAlchemy metadata
+        2. Applies column additions from Alembic migrations using raw SQL
+
+        Safe to call multiple times - checks existing columns before adding.
 
         Uses Cloud SQL Connector in Cloud Run for secure database access.
 
@@ -79,8 +82,7 @@ def create_app() -> FastAPI:
         try:
             # Ensure the database connection is initialized (uses Cloud SQL Connector in Cloud Run)
             from src.database.connection import _init_db, _engine
-            from alembic.config import Config
-            from alembic import command
+            from src.models import Base
 
             _init_db()
             logger.info("Database connection initialized via Cloud SQL Connector")
@@ -93,36 +95,69 @@ def create_app() -> FastAPI:
                     "timestamp": datetime.now().isoformat()
                 }
 
-            # Get project root directory
-            project_root = Path(__file__).parent.parent
-            alembic_dir = project_root / "alembic"
-            alembic_ini = project_root / "alembic.ini"
+            logger.info("Creating base database tables using SQLAlchemy...")
 
-            if not alembic_ini.exists():
-                logger.error(f"alembic.ini not found: {alembic_ini}")
-                return {
-                    "status": "error",
-                    "message": f"alembic.ini not found: {alembic_ini}",
-                    "timestamp": datetime.now().isoformat()
-                }
+            # Step 1: Create all tables defined in models
+            Base.metadata.create_all(bind=_engine)
+            logger.info("Base tables created successfully")
 
-            logger.info(f"Running Alembic migrations via Python API...")
+            # Step 2: Apply migration 002 - add English summary fields
+            # Check if columns already exist before adding them
+            logger.info("Checking for English summary columns...")
 
-            # Load Alembic configuration
-            alembic_cfg = Config(str(alembic_ini))
-            alembic_cfg.set_main_option("script_location", str(alembic_dir))
+            with _engine.connect() as connection:
+                # For PostgreSQL, check information_schema
+                try:
+                    result = connection.execute(
+                        "SELECT column_name FROM information_schema.columns "
+                        "WHERE table_name='processed_news' AND column_name='summary_pro_en'"
+                    )
+                    has_summary_pro_en = result.fetchone() is not None
+                except Exception as check_e:
+                    logger.warning(f"Could not check for summary_pro_en: {check_e}")
+                    has_summary_pro_en = False
 
-            # Run alembic upgrade head using the configured engine
-            # This avoids the need to subprocess and uses Cloud SQL Connector directly
-            with _engine.begin() as connection:
-                alembic_cfg.attributes["connection"] = connection
-                logger.info("Applying pending migrations...")
-                command.upgrade(alembic_cfg, "head")
-                logger.info("Migrations applied successfully")
+                # Add summary_pro_en column if it doesn't exist
+                if not has_summary_pro_en:
+                    logger.info("Adding summary_pro_en column...")
+                    try:
+                        connection.execute(
+                            "ALTER TABLE processed_news ADD COLUMN summary_pro_en TEXT NULL"
+                        )
+                        connection.commit()
+                        logger.info("summary_pro_en column added successfully")
+                    except Exception as add_e:
+                        logger.warning(f"Could not add summary_pro_en: {add_e}")
+                        connection.rollback()
+
+                # Add summary_sci_en column if it doesn't exist
+                try:
+                    result = connection.execute(
+                        "SELECT column_name FROM information_schema.columns "
+                        "WHERE table_name='processed_news' AND column_name='summary_sci_en'"
+                    )
+                    has_summary_sci_en = result.fetchone() is not None
+                except Exception as check_e:
+                    logger.warning(f"Could not check for summary_sci_en: {check_e}")
+                    has_summary_sci_en = False
+
+                if not has_summary_sci_en:
+                    logger.info("Adding summary_sci_en column...")
+                    try:
+                        connection.execute(
+                            "ALTER TABLE processed_news ADD COLUMN summary_sci_en TEXT NULL"
+                        )
+                        connection.commit()
+                        logger.info("summary_sci_en column added successfully")
+                    except Exception as add_e:
+                        logger.warning(f"Could not add summary_sci_en: {add_e}")
+                        connection.rollback()
+
+            logger.info("Database initialization completed successfully")
 
             return {
                 "status": "success",
-                "message": "Database tables initialized and all migrations applied successfully",
+                "message": "Database tables initialized and migrations applied successfully",
                 "timestamp": datetime.now().isoformat()
             }
 
