@@ -51,9 +51,10 @@ def _init_db_cloud_sql(settings):
         print(f"[DB] Connection string: deepdive-engine:asia-east1:deepdive-db")
         print(f"[DB] Database user: deepdive_user")
 
-        # Determine IP type: try PRIVATE first, fallback to PUBLIC if needed
-        ip_type = IPTypes.PRIVATE
-        print(f"[DB] Using IPTypes.PRIVATE for VPC connection")
+        # Determine IP type: Use PUBLIC by default since Cloud SQL may not have private IP configured
+        # This is safer and works for most Cloud Run setups
+        ip_type = IPTypes.PUBLIC
+        print(f"[DB] Using IPTypes.PUBLIC for Cloud SQL connection")
 
         # Create connector - this handles all authentication via GCP service account
         print("[DB] Creating Connector instance...")
@@ -68,29 +69,15 @@ def _init_db_cloud_sql(settings):
             db_password = os.getenv("CLOUDSQL_PASSWORD", "")  # password from env var only
             db_name = os.getenv("CLOUDSQL_DATABASE", "deepdive_db")
 
-            try:
-                return connector.connect(
-                    "deepdive-engine:asia-east1:deepdive-db",
-                    "pg8000",
-                    user=db_user,
-                    password=db_password,  # from env var, not hardcoded
-                    db=db_name,
-                    ip_type=ip_type,
-                )
-            except Exception as conn_err:
-                print(f"[DB] ERROR in getconn() with {ip_type}: {conn_err}", file=sys.stderr)
-                # If PRIVATE IP fails, try PUBLIC
-                if ip_type == IPTypes.PRIVATE:
-                    print("[DB] Retrying with PUBLIC IP...", file=sys.stderr)
-                    return connector.connect(
-                        "deepdive-engine:asia-east1:deepdive-db",
-                        "pg8000",
-                        user=db_user,
-                        password=db_password,  # from env var, not hardcoded
-                        db=db_name,
-                        ip_type=IPTypes.PUBLIC,
-                    )
-                raise
+            print("[DB] ✓ Requesting connection from Cloud SQL Connector...")
+            return connector.connect(
+                "deepdive-engine:asia-east1:deepdive-db",
+                "pg8000",
+                user=db_user,
+                password=db_password,  # from env var, not hardcoded
+                db=db_name,
+                ip_type=ip_type,
+            )
 
         # Create engine with Cloud SQL Connector
         print("[DB] Creating SQLAlchemy engine with Cloud SQL Connector...")
