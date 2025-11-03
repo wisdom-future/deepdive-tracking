@@ -169,8 +169,7 @@ async def main():
             source_url="https://deepdive-tracking.github.io",
             score=0,
             category="Daily Digest",
-            email_list=[recipient_email],  # Only ONE recipient
-            is_html=True
+            email_list=[recipient_email]  # Only ONE recipient
         )
 
         print("\n" + "=" * 70)
