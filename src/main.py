@@ -208,6 +208,19 @@ def create_app() -> FastAPI:
             raw_count = session.query(RawNews).count()
             processed_count = session.query(ProcessedNews).count()
 
+            # Get sample of raw news to check for errors
+            samples = session.query(RawNews).limit(1).all()
+            sample_data = None
+            if samples:
+                news = samples[0]
+                sample_data = {
+                    "id": str(news.id),
+                    "title": news.title[:100] if news.title else None,
+                    "status": news.status,
+                    "is_duplicate": news.is_duplicate,
+                    "published_at": news.published_at.isoformat() if news.published_at else None
+                }
+
             session.close()
 
             issues = []
@@ -221,12 +234,80 @@ def create_app() -> FastAPI:
                 "raw_news_count": raw_count,
                 "processed_news_count": processed_count,
                 "has_data": raw_count > 0 and processed_count > 0,
+                "sample_raw_news": sample_data,
                 "issues": issues,
                 "timestamp": datetime.now().isoformat()
             }
 
         except Exception as e:
             logger.error(f"Database diagnostic failed: {e}", exc_info=True)
+            return {
+                "status": "error",
+                "message": str(e),
+                "timestamp": datetime.now().isoformat()
+            }
+
+    @app.post("/seed-test-data")
+    async def seed_test_data() -> dict:
+        """Seed the database with test processed news data for email/publishing testing.
+
+        This creates processed news records from collected raw news so the email
+        and publishing functions can be tested without waiting for AI scoring.
+
+        Returns:
+            dict: Number of processed news records created.
+        """
+        logger = logging.getLogger(__name__)
+        logger.info("Test data seeding request received")
+
+        try:
+            from src.database.connection import get_session
+            from src.models import RawNews, ProcessedNews
+
+            session = get_session()
+
+            # Get raw news articles that don't have processed records yet
+            unprocessed = session.query(RawNews).filter(
+                ~RawNews.id.in_(
+                    session.query(ProcessedNews.raw_news_id)
+                )
+            ).limit(5).all()
+
+            if not unprocessed:
+                return {
+                    "status": "success",
+                    "created_count": 0,
+                    "message": "No unprocessed news found to seed",
+                    "timestamp": datetime.now().isoformat()
+                }
+
+            # Create processed news records with test data
+            created_count = 0
+            for raw_news in unprocessed:
+                processed = ProcessedNews(
+                    raw_news_id=raw_news.id,
+                    score=75,  # Test score
+                    category="AI News",
+                    summary_pro=f"Professional summary of: {raw_news.title[:100]}",
+                    summary_sci="This is a test processed record created for email testing",
+                    should_publish=True,
+                    processing_status="completed"
+                )
+                session.add(processed)
+                created_count += 1
+
+            session.commit()
+            session.close()
+
+            return {
+                "status": "success",
+                "created_count": created_count,
+                "message": f"Created {created_count} test processed news records",
+                "timestamp": datetime.now().isoformat()
+            }
+
+        except Exception as e:
+            logger.error(f"Test data seeding failed: {e}", exc_info=True)
             return {
                 "status": "error",
                 "message": str(e),
