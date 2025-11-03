@@ -175,6 +175,7 @@ main() {
         "--set-env-vars" "APP_ENV=production"
         "--set-env-vars" "DEBUG=False"
         "--set-env-vars" "LOG_LEVEL=INFO"
+        "--set-env-vars" "GOOGLE_CLOUD_PROJECT=${PROJECT_ID}"
         "--service-account" "726493701291-compute@developer.gserviceaccount.com"
     )
 

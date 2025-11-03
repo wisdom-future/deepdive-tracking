@@ -16,8 +16,9 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
 from src.services.channels.github.github_publisher import GitHubPublisher
 from src.config.settings import get_settings
 from src.models import ProcessedNews, RawNews
-from sqlalchemy import create_engine, desc
-from sqlalchemy.orm import sessionmaker, joinedload
+from sqlalchemy import desc
+from sqlalchemy.orm import joinedload
+from src.database.connection import get_session
 
 
 # AI-related keywords and categories
@@ -106,9 +107,7 @@ async def main():
     # Fetch all news and filter AI-related ones
     print("\n3. Fetching and filtering AI-related news...")
     try:
-        engine = create_engine(settings.database_url)
-        Session = sessionmaker(bind=engine)
-        session = Session()
+        session = get_session()
 
         # Get all news sorted by score
         all_news = session.query(ProcessedNews).options(
