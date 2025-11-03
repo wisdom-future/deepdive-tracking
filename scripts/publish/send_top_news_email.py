@@ -17,6 +17,20 @@ from sqlalchemy import desc
 from sqlalchemy.orm import joinedload
 
 
+def _get_score_color(score: float) -> str:
+    """Get color based on score"""
+    if score >= 80:
+        return "#10b981"  # 绿色
+    elif score >= 60:
+        return "#3b82f6"  # 蓝色
+    elif score >= 40:
+        return "#f59e0b"  # 橙色
+    elif score >= 20:
+        return "#ef4444"  # 红色
+    else:
+        return "#6b7280"  # 灰色
+
+
 async def main():
     """Send TOP news email"""
     settings = get_settings()
@@ -127,7 +141,12 @@ async def main():
             if not news.raw_news:
                 continue
 
+            # Get summary and limit to ~100 characters
             summary = news.summary_pro or news.summary_sci or "No summary available"
+            # Truncate to approximately 100 characters if too long
+            if len(summary) > 120:
+                summary = summary[:120].rsplit(' ', 1)[0] + "..."
+
             source_url = news.raw_news.url or "https://deepdive-tracking.github.io"
             author = news.raw_news.source_name or news.raw_news.author or "Unknown Source"
             score = news.score or 0
@@ -135,12 +154,12 @@ async def main():
             email_content_lines.extend([
                 '<div class="news-item">',
                 f'<div class="news-title">{idx}. {news.raw_news.title}</div>',
-                f'<div class="news-score">Score: {score}/100</div>',
+                f'<div class="news-score" style="background: {_get_score_color(score)};">Score: {score}/100</div>',
                 f'<div class="news-summary">{summary}</div>',
                 '<div class="news-meta">',
-                f'📌 Category: {news.category or "AI News"} | ',
-                f'📝 Source: {author} | ',
-                f'<a class="news-link" href="{source_url}" target="_blank">Read full article →</a>',
+                f'📌 {news.category or "AI News"} | ',
+                f'📝 {author} | ',
+                f'<a href="{source_url}" target="_blank" style="color: {_get_score_color(score)};">Read →</a>',
                 '</div>',
                 '</div>'
             ])

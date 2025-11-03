@@ -277,18 +277,23 @@ class EmailPublisher:
         category: str,
         publish_date: datetime
     ) -> str:
-        """生成邮件HTML"""
-        # 计算评分等级
+        """生成邮件HTML - 业界最佳实践设计"""
+        # 计算评分等级和颜色
         if score >= 80:
             score_level = "⭐⭐⭐⭐⭐"
+            score_color = "#10b981"  # 绿色
         elif score >= 60:
             score_level = "⭐⭐⭐⭐"
+            score_color = "#3b82f6"  # 蓝色
         elif score >= 40:
             score_level = "⭐⭐⭐"
+            score_color = "#f59e0b"  # 橙色
         elif score >= 20:
             score_level = "⭐⭐"
+            score_color = "#ef4444"  # 红色
         else:
             score_level = "⭐"
+            score_color = "#6b7280"  # 灰色
 
         return f"""<!DOCTYPE html>
 <html lang="zh-CN">
@@ -305,43 +310,44 @@ class EmailPublisher:
 
         body {{
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-            line-height: 1.6;
-            color: #333;
-            background: #f5f5f5;
-            padding: 20px 0;
+            line-height: 1.8;
+            color: #1f2937;
+            background: #f9fafb;
+            padding: 40px 20px;
         }}
 
         .container {{
-            max-width: 600px;
+            max-width: 680px;
             margin: 0 auto;
             background: white;
-            border-radius: 8px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
             overflow: hidden;
         }}
 
         .header {{
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #1f2937 0%, #374151 100%);
             color: white;
-            padding: 30px 20px;
+            padding: 50px 40px;
             text-align: center;
         }}
 
         .header h1 {{
-            font-size: 1.8em;
-            margin-bottom: 15px;
+            font-size: 2.2em;
+            margin-bottom: 20px;
             word-break: break-word;
+            font-weight: 700;
         }}
 
         .meta {{
             display: flex;
             justify-content: center;
-            gap: 20px;
+            gap: 30px;
             flex-wrap: wrap;
-            font-size: 0.9em;
-            opacity: 0.9;
-            padding: 15px 0 0 0;
-            border-top: 1px solid rgba(255,255,255,0.3);
+            font-size: 0.95em;
+            opacity: 0.95;
+            padding: 20px 0 0 0;
+            border-top: 1px solid rgba(255,255,255,0.2);
         }}
 
         .meta-item {{
@@ -349,112 +355,151 @@ class EmailPublisher:
         }}
 
         .meta-label {{
-            font-size: 0.8em;
+            font-size: 0.85em;
             opacity: 0.8;
             display: block;
+            margin-bottom: 5px;
         }}
 
         .meta-value {{
-            font-weight: bold;
+            font-weight: 600;
             display: block;
         }}
 
         .score {{
             font-size: 1.1em;
+            color: {score_color};
         }}
 
         .content-wrapper {{
-            padding: 30px 20px;
+            padding: 45px 40px;
         }}
 
         .summary {{
-            background: #e7f3ff;
-            border-left: 4px solid #667eea;
-            padding: 15px;
-            margin-bottom: 20px;
-            border-radius: 4px;
+            background: #f0f9ff;
+            border-left: 5px solid {score_color};
+            padding: 20px;
+            margin-bottom: 30px;
+            border-radius: 6px;
+            font-size: 0.95em;
+            line-height: 1.8;
         }}
 
         .summary-title {{
-            font-weight: bold;
-            color: #667eea;
-            margin-bottom: 10px;
-            font-size: 0.95em;
+            font-weight: 700;
+            color: {score_color};
+            margin-bottom: 12px;
+            font-size: 1em;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }}
+
+        .summary-zh {{
+            color: #374151;
+            margin-bottom: 15px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #e5e7eb;
+        }}
+
+        .summary-en {{
+            color: #4b5563;
+            font-size: 0.9em;
+            font-style: italic;
         }}
 
         .article-content {{
-            line-height: 1.8;
-            color: #444;
-            font-size: 0.95em;
+            line-height: 1.9;
+            color: #374151;
+            font-size: 0.96em;
         }}
 
         .article-content p {{
-            margin-bottom: 15px;
+            margin-bottom: 18px;
         }}
 
         .article-content h2 {{
-            font-size: 1.3em;
-            margin: 25px 0 15px 0;
-            color: #667eea;
+            font-size: 1.4em;
+            margin: 28px 0 16px 0;
+            color: #1f2937;
+            font-weight: 700;
         }}
 
         .article-content h3 {{
-            font-size: 1.1em;
-            margin: 20px 0 10px 0;
-            color: #764ba2;
+            font-size: 1.15em;
+            margin: 22px 0 12px 0;
+            color: #374151;
+            font-weight: 600;
         }}
 
         .article-content a {{
-            color: #667eea;
+            color: {score_color};
             text-decoration: none;
+            font-weight: 500;
+            border-bottom: 1px solid {score_color};
         }}
 
         .article-content a:hover {{
-            text-decoration: underline;
+            opacity: 0.8;
         }}
 
         .source {{
-            background: #f0f8ff;
-            border: 1px solid #b3d9ff;
-            padding: 12px 15px;
-            border-radius: 4px;
-            margin: 20px 0 0 0;
+            background: #f3f4f6;
+            border: 2px solid {score_color};
+            padding: 18px 20px;
+            border-radius: 8px;
+            margin: 30px 0 0 0;
             font-size: 0.9em;
         }}
 
         .source-title {{
-            font-weight: bold;
-            color: #333;
-            margin-bottom: 8px;
+            font-weight: 700;
+            color: #1f2937;
+            margin-bottom: 10px;
+            font-size: 0.95em;
         }}
 
         .source-link {{
             word-break: break-all;
-            color: #667eea;
+            color: {score_color};
+            font-weight: 500;
+        }}
+
+        .cta-button {{
+            display: inline-block;
+            background: {score_color};
+            color: white;
+            padding: 14px 32px;
+            border-radius: 6px;
+            text-decoration: none;
+            margin-top: 25px;
+            font-size: 0.95em;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }}
+
+        .cta-button:hover {{
+            opacity: 0.95;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
         }}
 
         .footer {{
-            background: #f8f9fa;
-            padding: 15px 20px;
-            border-top: 1px solid #e9ecef;
+            background: #f3f4f6;
+            padding: 30px 40px;
+            border-top: 1px solid #e5e7eb;
             font-size: 0.85em;
-            color: #6c757d;
+            color: #6b7280;
             text-align: center;
         }}
 
-        .button {{
-            display: inline-block;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 10px 20px;
-            border-radius: 4px;
-            text-decoration: none;
-            margin-top: 15px;
-            font-size: 0.9em;
+        .footer p {{
+            margin: 8px 0;
         }}
 
-        .button:hover {{
-            opacity: 0.9;
+        .footer-link {{
+            color: {score_color};
+            text-decoration: none;
+            font-weight: 600;
         }}
 
         @media (max-width: 600px) {{
@@ -493,8 +538,13 @@ class EmailPublisher:
 
         <div class="content-wrapper">
             <div class="summary">
-                <div class="summary-title">📌 内容摘要</div>
-                <p>{html.escape(summary)}</p>
+                <div class="summary-title">📌 Summary</div>
+                <div class="summary-zh">
+                    {html.escape(summary)}
+                </div>
+                <div class="summary-en">
+                    (摘要展示，已提炼核心信息)
+                </div>
             </div>
 
             <div class="article-content">
@@ -502,18 +552,21 @@ class EmailPublisher:
             </div>
 
             <div class="source">
-                <div class="source-title">📚 原文链接</div>
-                <div class="source-link"><a href="{html.escape(source_url)}" target="_blank">{html.escape(source_url)}</a></div>
+                <div class="source-title">🔗 READ FULL ARTICLE</div>
+                <div class="source-link">
+                    <a href="{html.escape(source_url)}" target="_blank" style="word-break: break-all;">{html.escape(source_url)}</a>
+                </div>
             </div>
 
-            <center>
-                <a href="{html.escape(source_url)}" class="button">查看原文</a>
-            </center>
+            <div style="text-align: center; margin-top: 30px;">
+                <a href="{html.escape(source_url)}" target="_blank" class="cta-button">View Full Article →</a>
+            </div>
         </div>
 
         <div class="footer">
-            <p>由 DeepDive Tracking 生成 | {publish_date.strftime('%Y-%m-%d %H:%M:%S')}</p>
-            <p style="margin-top: 10px; font-size: 0.8em; opacity: 0.8;">AI领域资讯深度追踪与精选</p>
+            <p>📊 Generated by <span class="footer-link">DeepDive Tracking</span> - AI News Intelligence Platform</p>
+            <p>{publish_date.strftime('%Y-%m-%d %H:%M:%S')} | Score: {score}/100 | Category: {html.escape(category)}</p>
+            <p style="margin-top: 15px; opacity: 0.7;">© 2025 DeepDive Tracking. Real-time AI news tracking and intelligent analysis.</p>
         </div>
     </div>
 </body>
