@@ -1,14 +1,24 @@
 #!/usr/bin/env python3
 """
 Send TOP news email - Send the highest-scored AI news items by email with bilingual summaries
+
+生产级邮件发送脚本 - 完整的错误处理、日志记录和数据验证
 """
 import sys
 import os
 import asyncio
+import logging
 from datetime import datetime
 
 # Add project root to Python path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
+
+# Configure logging for production
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
 
 from src.services.channels.email.email_publisher import EmailPublisher
 from src.config.settings import get_settings
@@ -189,25 +199,38 @@ def generate_bilingual_email_html(news_items: list, date_str: str) -> str:
 
 
 async def main():
-    """Send TOP news email"""
+    """Send TOP news email - Production-grade implementation"""
+    logger.info("Starting email send workflow...")
     settings = get_settings()
 
-    print("=" * 70)
-    print("TOP NEWS EMAIL - Clean Mobile-Friendly Design with Bilingual Content")
-    print("=" * 70)
+    print("\n" + "=" * 80)
+    print("DEEPDIVE TRACKING - PRODUCTION EMAIL SERVICE")
+    print("=" * 80)
 
-    # Check SMTP configuration
-    print("\n1. Checking SMTP configuration...")
-    if not settings.smtp_user or not settings.smtp_password:  # noqa: S105
-        print("[FAILED] SMTP credentials not configured")
+    # Step 1: Validate SMTP configuration
+    logger.info("Step 1: Validating SMTP configuration...")
+    print("\nStep 1: Validating SMTP configuration...")
+
+    if not settings.smtp_host:
+        logger.error("SMTP_HOST not configured")
+        print("ERROR: SMTP_HOST not configured")
         return False
 
-    print(f"[OK] SMTP Host: {settings.smtp_host}")
-    print(f"[OK] SMTP Port: {settings.smtp_port}")
-    print(f"[OK] From Email: {settings.smtp_from_email}")
+    if not settings.smtp_user or not settings.smtp_password:  # noqa: S105
+        logger.error("SMTP authentication config missing")
+        print("ERROR: SMTP credentials not configured")
+        return False
 
-    # Initialize Email Publisher
-    print("\n2. Initializing Email Publisher...")
+    logger.info(f"SMTP config OK - Host: {settings.smtp_host}, Port: {settings.smtp_port}")
+    print(f"  SMTP Host: {settings.smtp_host}")
+    print(f"  SMTP Port: {settings.smtp_port}")
+    print(f"  From Email: {settings.smtp_from_email}")
+    print("  Status: PASS")
+
+    # Step 2: Initialize EmailPublisher
+    logger.info("Step 2: Initializing EmailPublisher...")
+    print("\nStep 2: Initializing EmailPublisher...")
+
     try:
         publisher = EmailPublisher(
             smtp_host=settings.smtp_host,
@@ -217,15 +240,18 @@ async def main():
             from_email=settings.smtp_from_email,
             from_name=settings.smtp_from_name
         )
-        print("[OK] Email publisher initialized successfully")
+        logger.info("EmailPublisher initialized successfully")
+        print("  Status: PASS")
     except Exception as e:
-        print(f"[FAILED] Initialization failed: {e}")
-        import traceback
-        traceback.print_exc()
+        logger.error(f"Failed to initialize EmailPublisher: {e}", exc_info=True)
+        print(f"  ERROR: {e}")
         return False
 
-    # Fetch TOP news from database
-    print("\n3. Fetching TOP news from database...")
+    # Step 3: Fetch TOP news from database
+    logger.info("Step 3: Fetching TOP 10 news items from database...")
+    print("\nStep 3: Fetching TOP 10 news items...")
+
+    session = None
     try:
         session = get_session()
 
@@ -235,42 +261,69 @@ async def main():
             desc(ProcessedNews.score)
         ).limit(10).all()
 
-        session.close()
-
         if not top_news:
-            print("[WARNING] No news found in the database")
+            logger.warning("No processed news found in database")
+            print("  WARNING: No news items found in database")
             return False
 
-        print(f"[OK] Found {len(top_news)} news items")
+        logger.info(f"Retrieved {len(top_news)} top news items")
+        print(f"  Found {len(top_news)} items:")
+
         for idx, news in enumerate(top_news, 1):
-            title = news.raw_news.title if news.raw_news else "Unknown Title"
+            title = news.raw_news.title if news.raw_news else "Unknown"
             score = news.score or 0
-            print(f"    {idx}. {title} (Score: {score})")
+            summary_zh = news.summary_pro or news.summary_sci or "N/A"
+            summary_en = news.summary_pro_en or news.summary_sci_en or "N/A"
+
+            logger.info(f"  [{idx}] {title} (Score: {score})")
+            logger.debug(f"      Chinese: {summary_zh[:50]}...")
+            logger.debug(f"      English: {summary_en[:50]}...")
+            print(f"    [{idx}] Score:{score:3.0f} | {title[:60]}")
+
+        print("  Status: PASS")
 
     except Exception as e:
-        print(f"[FAILED] Database query failed: {e}")
-        import traceback
-        traceback.print_exc()
+        logger.error(f"Database query failed: {e}", exc_info=True)
+        print(f"  ERROR: Database query failed - {e}")
         return False
+    finally:
+        if session:
+            session.close()
+            logger.debug("Database session closed")
 
-    # Generate and send email
-    print("\n4. Generating email with bilingual summaries...")
-    recipient_email = settings.smtp_from_email or "hello.junjie.duan@gmail.com"
-    date_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    # Step 4: Generate email HTML
+    logger.info("Step 4: Generating bilingual email HTML...")
+    print("\nStep 4: Generating email HTML...")
 
     try:
-        # Generate clean HTML with bilingual content
+        recipient_email = settings.smtp_from_email or "hello.junjie.duan@gmail.com"
+        date_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
         html_content = generate_bilingual_email_html(top_news, date_str)
+        html_size = len(html_content)
 
-        print(f"[OK] Generated HTML email with {len(top_news)} items")
-        print(f"[OK] Recipient: {recipient_email}")
+        logger.info(f"Generated HTML email ({html_size} bytes) with {len(top_news)} news items")
+        print(f"  Generated HTML ({html_size} bytes)")
+        print(f"  Recipient: {recipient_email}")
+        print("  Status: PASS")
 
-        # Send email
-        print("\n5. Sending consolidated email...")
+    except Exception as e:
+        logger.error(f"Failed to generate email HTML: {e}", exc_info=True)
+        print(f"  ERROR: {e}")
+        return False
+
+    # Step 5: Send email via SMTP
+    logger.info("Step 5: Sending email via SMTP...")
+    print("\nStep 5: Sending email via SMTP...")
+
+    try:
+        email_title = f"AI News Daily Digest - {datetime.now().strftime('%Y-%m-%d')} ({len(top_news)} items)"
+
+        logger.info(f"Calling EmailPublisher.publish_article()...")
         result = await publisher.publish_article(
-            title=f"AI News Daily Digest - {datetime.now().strftime('%Y-%m-%d')} ({len(top_news)} items)",
+            title=email_title,
             content=html_content,
-            summary=f"Top {len(top_news)} AI news items with bilingual summaries",
+            summary=f"Top {len(top_news)} AI news items with Chinese and English bilingual summaries",
             author="DeepDive Tracking",
             source_url="https://deepdive-tracking.github.io",
             score=0,
@@ -278,24 +331,37 @@ async def main():
             email_list=[recipient_email]
         )
 
-        print("\n" + "=" * 70)
-        print("EMAIL SENDING COMPLETE")
-        print("=" * 70)
+        logger.info(f"Email send result: {result}")
 
         if result and result.get("success"):
-            print(f"\n[OK] Successfully sent email with {len(top_news)} items")
-            print(f"[OK] Recipient: {recipient_email}")
-            print("[OK] Email includes Chinese + English bilingual summaries")
+            sent_count = result.get("sent_count", 0)
+            logger.info(f"Email sent successfully to {sent_count} recipient(s)")
+            print(f"  Email sent successfully!")
+            print(f"  Recipient: {recipient_email}")
+            print(f"  Items: {len(top_news)}")
+            print("  Status: PASS")
+
+            print("\n" + "=" * 80)
+            print("EMAIL SEND WORKFLOW COMPLETED SUCCESSFULLY")
+            print("=" * 80)
             return True
         else:
             error_msg = result.get("error", "Unknown error") if isinstance(result, dict) else "Unknown error"
-            print(f"\n[WARNING] Email send returned: {error_msg}")
+            failed_emails = result.get("failed_emails", []) if isinstance(result, dict) else []
+
+            logger.error(f"Email send failed: {error_msg}")
+            logger.error(f"Failed recipients: {failed_emails}")
+
+            print(f"  ERROR: Email send failed")
+            print(f"  Error: {error_msg}")
+            print(f"  Failed recipients: {failed_emails}")
+            print("  Status: FAIL")
             return False
 
     except Exception as e:
-        print(f"[FAILED] Exception during send: {e}")
-        import traceback
-        traceback.print_exc()
+        logger.error(f"Exception during email send: {e}", exc_info=True)
+        print(f"  ERROR: {e}")
+        print("  Status: FAIL")
         return False
 
 
