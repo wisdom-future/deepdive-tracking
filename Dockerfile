@@ -8,20 +8,23 @@ RUN apt-get update && apt-get install -y \
     postgresql-client \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy requirements
-COPY pyproject.toml setup.py ./
-
-# Install Python dependencies
-RUN pip install --no-cache-dir -e ".[dev,ai]"
-
-# Copy application code
+# Copy application code first
 COPY . .
 
-# Expose port
-EXPOSE 8000
+# Install Python dependencies from requirements.txt or setup.py
+# Try requirements.txt first, fallback to setup.py
+RUN if [ -f requirements.txt ]; then \
+        pip install --no-cache-dir -r requirements.txt; \
+    elif [ -f setup.py ]; then \
+        pip install --no-cache-dir -e .; \
+    else \
+        pip install --no-cache-dir flask uvicorn sqlalchemy psycopg2-binary redis requests; \
+    fi
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
-    CMD python -c "import requests; requests.get('http://localhost:8000/health')"
+# Expose port 8080 (Cloud Run standard)
+EXPOSE 8080
 
-CMD ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Run with PORT environment variable (Cloud Run expects this)
+# Note: Cloud Run uses TCP probes to check container readiness
+# The --access-log flag helps with debugging startup issues
+CMD ["sh", "-c", "uvicorn src.main:app --host 0.0.0.0 --port ${PORT:-8080} --log-level info"]
