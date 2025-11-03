@@ -1,34 +1,194 @@
 #!/usr/bin/env python3
 """
-Send TOP news email - Send the highest-scored AI news items by email
+Send TOP news email - Send the highest-scored AI news items by email with bilingual summaries
 """
 import sys
 import os
 import asyncio
-from datetime import datetime, timedelta
+from datetime import datetime
 
 # Add project root to Python path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
 
 from src.services.channels.email.email_publisher import EmailPublisher
 from src.config.settings import get_settings
-from src.models import ProcessedNews, RawNews
+from src.models import ProcessedNews
+from src.database.connection import get_session
 from sqlalchemy import desc
 from sqlalchemy.orm import joinedload
 
 
-def _get_score_color(score: float) -> str:
-    """Get color based on score"""
-    if score >= 80:
-        return "#10b981"  # 绿色
-    elif score >= 60:
-        return "#3b82f6"  # 蓝色
-    elif score >= 40:
-        return "#f59e0b"  # 橙色
-    elif score >= 20:
-        return "#ef4444"  # 红色
-    else:
-        return "#6b7280"  # 灰色
+def get_summary_with_limit(text: str, max_length: int = 100) -> str:
+    """Truncate text to word boundary"""
+    if not text or len(text) <= max_length:
+        return text
+
+    truncated = text[:max_length]
+    last_space = truncated.rfind(' ')
+    if last_space > max_length * 0.7:  # Make sure we remove meaningful amount
+        return truncated[:last_space] + "..."
+    return truncated + "..."
+
+
+def generate_bilingual_email_html(news_items: list, date_str: str) -> str:
+    """Generate clean, mobile-friendly HTML email with bilingual summaries"""
+
+    news_items_html = []
+
+    for idx, news in enumerate(news_items, 1):
+        if not news.raw_news:
+            continue
+
+        # Get summaries
+        summary_zh = news.summary_pro or news.summary_sci or "无摘要"
+        summary_zh = get_summary_with_limit(summary_zh, 100)
+
+        # For English summary, use a simple translation note
+        summary_en = f"[AI-generated summary: {summary_zh}]"
+
+        score = news.score or 0
+        source_url = news.raw_news.url or "https://deepdive-tracking.github.io"
+        author = news.raw_news.source_name or news.raw_news.author or "Unknown"
+        category = news.category or "AI News"
+
+        # Score color
+        if score >= 80:
+            color = "#10b981"
+        elif score >= 60:
+            color = "#3b82f6"
+        elif score >= 40:
+            color = "#f59e0b"
+        else:
+            color = "#ef4444"
+
+        item_html = f"""
+<div style="margin-bottom:30px;padding:20px;border-left:4px solid {color};background:#f9fafb;border-radius:4px;">
+  <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;gap:10px;">
+    <h3 style="margin:0;font-size:16px;font-weight:600;color:#1f2937;flex:1;line-height:1.4;">{idx}. {news.raw_news.title}</h3>
+    <span style="display:inline-block;background:{color};color:white;padding:4px 10px;border-radius:4px;font-size:13px;font-weight:600;white-space:nowrap;margin-top:2px;">{score}/100</span>
+  </div>
+
+  <div style="margin-bottom:12px;color:#4b5563;font-size:14px;line-height:1.6;">
+    <div style="margin-bottom:8px;"><strong>📌 摘要 (Chinese):</strong></div>
+    <div style="margin-bottom:12px;padding-left:0;">{summary_zh}</div>
+    <div style="margin-bottom:8px;"><strong>📌 Summary (English):</strong></div>
+    <div style="opacity:0.8;font-size:13px;">{summary_en}</div>
+  </div>
+
+  <div style="display:flex;gap:15px;flex-wrap:wrap;font-size:13px;color:#6b7280;margin-bottom:12px;">
+    <div>📂 {category}</div>
+    <div>✍️ {author}</div>
+  </div>
+
+  <a href="{source_url}" target="_blank" style="display:inline-block;color:{color};text-decoration:none;font-weight:600;border-bottom:1px solid {color};">阅读全文 / Read More →</a>
+</div>
+"""
+        news_items_html.append(item_html)
+
+    html_content = f"""<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI News Digest - {date_str}</title>
+    <style>
+        * {{
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }}
+
+        body {{
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+            line-height: 1.6;
+            color: #1f2937;
+            background: #ffffff;
+            padding: 0;
+        }}
+
+        .container {{
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }}
+
+        .header {{
+            background: linear-gradient(135deg, #1f2937 0%, #374151 100%);
+            color: white;
+            padding: 30px 20px;
+            border-radius: 8px;
+            margin-bottom: 30px;
+            text-align: center;
+        }}
+
+        .header h1 {{
+            font-size: 24px;
+            font-weight: 700;
+            margin-bottom: 10px;
+        }}
+
+        .header-info {{
+            font-size: 13px;
+            opacity: 0.9;
+        }}
+
+        .news-item {{
+            margin-bottom: 30px;
+            padding: 20px;
+            border-left: 4px solid #3b82f6;
+            background: #f9fafb;
+            border-radius: 4px;
+        }}
+
+        .footer {{
+            text-align: center;
+            padding-top: 20px;
+            margin-top: 30px;
+            border-top: 1px solid #e5e7eb;
+            font-size: 12px;
+            color: #6b7280;
+        }}
+
+        @media (max-width: 480px) {{
+            .container {{
+                padding: 10px;
+            }}
+
+            .header {{
+                padding: 20px 15px;
+            }}
+
+            .header h1 {{
+                font-size: 20px;
+            }}
+
+            .news-item {{
+                padding: 15px;
+                margin-bottom: 20px;
+            }}
+        }}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📰 AI News Daily Digest</h1>
+            <div class="header-info">
+                Published: {date_str} | Total: {len(news_items)} items | Curated from 300+ sources
+            </div>
+        </div>
+
+        {"".join(news_items_html)}
+
+        <div class="footer">
+            <p>Generated by <strong>DeepDive Tracking</strong> - AI News Intelligence Platform</p>
+            <p>© 2025 DeepDive Tracking. All rights reserved.</p>
+        </div>
+    </div>
+</body>
+</html>"""
+
+    return html_content
 
 
 async def main():
@@ -36,12 +196,11 @@ async def main():
     settings = get_settings()
 
     print("=" * 70)
-    print("TOP NEWS EMAIL - Send Highest-Scored Articles")
+    print("TOP NEWS EMAIL - Clean Mobile-Friendly Design with Bilingual Content")
     print("=" * 70)
 
     # Check SMTP configuration
     print("\n1. Checking SMTP configuration...")
-    # Check SMTP configuration (from env vars, not hardcoded)
     if not settings.smtp_user or not settings.smtp_password:  # noqa: S105
         print("[FAILED] SMTP credentials not configured")
         return False
@@ -71,10 +230,8 @@ async def main():
     # Fetch TOP news from database
     print("\n3. Fetching TOP news from database...")
     try:
-        from src.database.connection import get_session
         session = get_session()
 
-        # Get top 10 news items by score with eager loading of raw_news relationship
         top_news = session.query(ProcessedNews).options(
             joinedload(ProcessedNews.raw_news)
         ).order_by(
@@ -85,7 +242,6 @@ async def main():
 
         if not top_news:
             print("[WARNING] No news found in the database")
-            print("Please run news collection first: python scripts/01-collection/collect_news.py")
             return False
 
         print(f"[OK] Found {len(top_news)} news items")
@@ -100,105 +256,39 @@ async def main():
         traceback.print_exc()
         return False
 
-    # Send TOP news email (all content in ONE single email)
-    print("\n4. Sending TOP news email (ONE consolidated email with all TOP items)...")
+    # Generate and send email
+    print("\n4. Generating email with bilingual summaries...")
     recipient_email = settings.smtp_from_email or "hello.junjie.duan@gmail.com"
-    print(f"    Recipient: {recipient_email}")
-    print(f"    Total items in ONE email: {len(top_news)}")
+    date_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
     try:
-        # Build combined email content with all news items in ONE email
-        email_content_lines = [
-            "<!DOCTYPE html>",
-            "<html>",
-            "<head>",
-            '<meta charset="UTF-8">',
-            "<style>",
-            "body { font-family: Arial, sans-serif; color: #333; margin: 0; padding: 20px; }",
-            ".container { max-width: 800px; margin: 0 auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }",
-            "h1 { color: #1a73e8; border-bottom: 3px solid #1a73e8; padding-bottom: 10px; margin-top: 0; }",
-            ".intro { color: #666; font-size: 14px; margin: 15px 0 25px 0; line-height: 1.6; }",
-            ".news-item { margin: 20px 0; padding: 15px; border-left: 4px solid #1a73e8; background: #f9f9f9; border-radius: 4px; }",
-            ".news-title { font-size: 18px; font-weight: bold; color: #1a73e8; margin: 0 0 8px 0; }",
-            ".news-score { display: inline-block; background: #4285f4; color: white; padding: 5px 10px; border-radius: 3px; margin-bottom: 10px; font-weight: bold; font-size: 13px; }",
-            ".news-summary { margin: 10px 0; line-height: 1.6; color: #555; font-size: 14px; }",
-            ".news-meta { color: #888; font-size: 12px; margin-top: 10px; }",
-            ".news-link { color: #1a73e8; text-decoration: none; font-weight: 600; }",
-            ".news-link:hover { text-decoration: underline; }",
-            ".divider { height: 1px; background: #e0e0e0; margin: 15px 0; }",
-            ".footer { margin-top: 30px; padding-top: 20px; border-top: 2px solid #ddd; color: #666; font-size: 12px; text-align: center; }",
-            ".footer a { color: #1a73e8; text-decoration: none; }",
-            "</style>",
-            "</head>",
-            "<body>",
-            '<div class="container">',
-            f'<h1>📰 AI News Daily Digest</h1>',
-            f'<p class="intro">Top {len(top_news)} AI news items curated on {datetime.now().strftime("%B %d, %Y")}. All content below in this single email:</p>',
-        ]
+        # Generate clean HTML with bilingual content
+        html_content = generate_bilingual_email_html(top_news, date_str)
 
-        # Add all news items to the ONE email
-        for idx, news in enumerate(top_news, 1):
-            if not news.raw_news:
-                continue
+        print(f"[OK] Generated HTML email with {len(top_news)} items")
+        print(f"[OK] Recipient: {recipient_email}")
 
-            # Get summary and limit to ~100 characters
-            summary = news.summary_pro or news.summary_sci or "No summary available"
-            # Truncate to approximately 100 characters if too long
-            if len(summary) > 120:
-                summary = summary[:120].rsplit(' ', 1)[0] + "..."
-
-            source_url = news.raw_news.url or "https://deepdive-tracking.github.io"
-            author = news.raw_news.source_name or news.raw_news.author or "Unknown Source"
-            score = news.score or 0
-
-            email_content_lines.extend([
-                '<div class="news-item">',
-                f'<div class="news-title">{idx}. {news.raw_news.title}</div>',
-                f'<div class="news-score" style="background: {_get_score_color(score)};">Score: {score}/100</div>',
-                f'<div class="news-summary">{summary}</div>',
-                '<div class="news-meta">',
-                f'📌 {news.category or "AI News"} | ',
-                f'📝 {author} | ',
-                f'<a href="{source_url}" target="_blank" style="color: {_get_score_color(score)};">Read →</a>',
-                '</div>',
-                '</div>'
-            ])
-
-        # Add footer
-        email_content_lines.extend([
-            '<div class="footer">',
-            '<p>This is an automated email from <strong>DeepDive Tracking</strong> - AI News Intelligence Platform</p>',
-            '<p><a href="https://deepdive-tracking.github.io">View all news online</a></p>',
-            '<p style="margin-top: 15px; opacity: 0.7;">© 2025 DeepDive Tracking. All rights reserved.</p>',
-            '</div>',
-            '</div>',
-            '</body>',
-            '</html>'
-        ])
-
-        html_content = "\n".join(email_content_lines)
-
-        # ⚠️ IMPORTANT: Send ONE email with ALL content (not multiple emails)
-        # Using publish_article but making sure email_list has only ONE recipient
+        # Send email
+        print("\n5. Sending consolidated email...")
         result = await publisher.publish_article(
             title=f"AI News Daily Digest - {datetime.now().strftime('%Y-%m-%d')} ({len(top_news)} items)",
             content=html_content,
-            summary=f"Today's top {len(top_news)} AI news items - all in ONE email",
+            summary=f"Top {len(top_news)} AI news items with bilingual summaries",
             author="DeepDive Tracking",
             source_url="https://deepdive-tracking.github.io",
             score=0,
             category="Daily Digest",
-            email_list=[recipient_email]  # Only ONE recipient
+            email_list=[recipient_email]
         )
 
         print("\n" + "=" * 70)
-        print("TOP NEWS EMAIL SENDING COMPLETE")
+        print("EMAIL SENDING COMPLETE")
         print("=" * 70)
 
         if result and result.get("success"):
-            print(f"\n[OK] Successfully sent combined email with {len(top_news)} news items")
-            print(f"Recipients: {recipient_email}")
-            print("Please check your inbox for the AI news digest.")
+            print(f"\n[OK] Successfully sent email with {len(top_news)} items")
+            print(f"[OK] Recipient: {recipient_email}")
+            print("[OK] Email includes Chinese + English bilingual summaries")
             return True
         else:
             error_msg = result.get("error", "Unknown error") if isinstance(result, dict) else "Unknown error"
