@@ -1,8 +1,13 @@
 """FastAPI application entry point for DeepDive Tracking."""
 
+import asyncio
+import json
 import logging
+import subprocess
+from datetime import datetime
+from pathlib import Path
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Response
 from fastapi.middleware.cors import CORSMiddleware
 
 from src import __version__
@@ -55,6 +60,87 @@ def create_app() -> FastAPI:
             dict: Welcome message.
         """
         return {"message": "Welcome to DeepDive Tracking API"}
+
+    @app.post("/trigger-workflow")
+    @app.post("/")
+    async def trigger_workflow() -> dict:
+        """Trigger daily workflow via Cloud Scheduler.
+
+        Executes: collect → score → email → github
+
+        Returns:
+            dict: Workflow execution status.
+        """
+        logger = logging.getLogger(__name__)
+        logger.info("Workflow trigger received")
+
+        try:
+            # Get project root
+            project_root = Path(__file__).parent.parent
+            workflow_script = project_root / "scripts" / "publish" / "daily_complete_workflow.py"
+
+            if not workflow_script.exists():
+                logger.error(f"Workflow script not found: {workflow_script}")
+                return {
+                    "status": "error",
+                    "message": f"Workflow script not found: {workflow_script}",
+                    "timestamp": datetime.now().isoformat()
+                }
+
+            logger.info(f"Executing workflow: {workflow_script}")
+
+            # Run the workflow script
+            result = subprocess.run(
+                ["python", str(workflow_script)],
+                capture_output=True,
+                text=True,
+                timeout=900,  # 15 minutes
+                cwd=str(project_root)
+            )
+
+            logger.info(f"Workflow exit code: {result.returncode}")
+
+            # Check if there's a results JSON file
+            logs_dir = project_root / "logs"
+            if logs_dir.exists():
+                # Find the most recent workflow log
+                log_files = sorted(logs_dir.glob("workflow_*.json"), reverse=True)
+                if log_files:
+                    try:
+                        with open(log_files[0], 'r', encoding='utf-8') as f:
+                            workflow_result = json.load(f)
+                        logger.info(f"Workflow completed with status: {workflow_result.get('status')}")
+                        return {
+                            "status": "completed",
+                            "workflow_status": workflow_result.get("status"),
+                            "details": workflow_result,
+                            "timestamp": datetime.now().isoformat()
+                        }
+                    except Exception as e:
+                        logger.error(f"Failed to read workflow result: {e}")
+
+            return {
+                "status": "success" if result.returncode == 0 else "failed",
+                "exit_code": result.returncode,
+                "stdout": result.stdout[-500:] if result.stdout else "",  # Last 500 chars
+                "stderr": result.stderr[-500:] if result.stderr else "",
+                "timestamp": datetime.now().isoformat()
+            }
+
+        except subprocess.TimeoutExpired:
+            logger.error("Workflow execution timeout")
+            return {
+                "status": "error",
+                "message": "Workflow execution timeout (15 minutes)",
+                "timestamp": datetime.now().isoformat()
+            }
+        except Exception as e:
+            logger.error(f"Workflow execution error: {e}")
+            return {
+                "status": "error",
+                "message": str(e),
+                "timestamp": datetime.now().isoformat()
+            }
 
     # Include API routers
     app.include_router(news.router, prefix="/api/v1")
