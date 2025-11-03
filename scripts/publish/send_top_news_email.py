@@ -31,7 +31,7 @@ def get_summary_with_limit(text: str, max_length: int = 100) -> str:
 
 
 def generate_bilingual_email_html(news_items: list, date_str: str) -> str:
-    """Generate clean, mobile-friendly HTML email with actual bilingual summaries"""
+    """Generate clean, mobile-friendly HTML email with bilingual summaries from AI"""
 
     news_items_html = []
 
@@ -39,9 +39,9 @@ def generate_bilingual_email_html(news_items: list, date_str: str) -> str:
         if not news.raw_news:
             continue
 
-        # Get both summaries - use them as distinct professional and technical perspectives
-        summary_pro = get_summary_with_limit(news.summary_pro or "无摘要", 120)
-        summary_sci = get_summary_with_limit(news.summary_sci or "无摘要", 120)
+        # Get summaries directly from database (AI already generated both Chinese and English)
+        summary_zh = get_summary_with_limit(news.summary_pro or news.summary_sci or "无摘要", 120)
+        summary_en = get_summary_with_limit(news.summary_pro_en or news.summary_sci_en or "No summary available", 120)
 
         score = news.score or 0
         source_url = news.raw_news.url or "https://deepdive-tracking.github.io"
@@ -66,10 +66,10 @@ def generate_bilingual_email_html(news_items: list, date_str: str) -> str:
   </div>
 
   <div style="margin-bottom:10px;color:#4b5563;font-size:14px;line-height:1.6;">
-    <div style="margin-bottom:3px;"><strong>📌 核心观点：</strong></div>
-    <div style="margin-bottom:10px;">{summary_pro}</div>
-    <div style="margin-bottom:3px;"><strong>🔬 技术角度：</strong></div>
-    <div style="margin-bottom:10px;">{summary_sci}</div>
+    <div style="margin-bottom:3px;"><strong>📌 摘要（中文）:</strong></div>
+    <div style="margin-bottom:10px;">{summary_zh}</div>
+    <div style="margin-bottom:3px;"><strong>📄 Summary (English):</strong></div>
+    <div style="margin-bottom:10px;">{summary_en}</div>
   </div>
 
   <div style="display:flex;gap:15px;flex-wrap:wrap;font-size:13px;color:#6b7280;margin-bottom:12px;">
@@ -77,7 +77,7 @@ def generate_bilingual_email_html(news_items: list, date_str: str) -> str:
     <div>✍️ {author}</div>
   </div>
 
-  <a href="{source_url}" target="_blank" style="display:inline-block;color:{color};text-decoration:none;font-weight:600;border-bottom:1px solid {color};">阅读全文 →</a>
+  <a href="{source_url}" target="_blank" style="display:inline-block;color:{color};text-decoration:none;font-weight:600;border-bottom:1px solid {color};">阅读全文 / Read More →</a>
 </div>
 """
         news_items_html.append(item_html)

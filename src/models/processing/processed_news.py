@@ -29,9 +29,13 @@ class ProcessedNews(BaseModel, Base):
     sub_categories: Mapped[Optional[List[str]]] = mapped_column(JSON, default=[])
     confidence: Mapped[Optional[float]] = mapped_column(Float)
 
-    # Content generation
+    # Content generation - Chinese versions
     summary_pro: Mapped[str] = mapped_column(Text, nullable=False)
     summary_sci: Mapped[str] = mapped_column(Text, nullable=False)
+
+    # Content generation - English versions
+    summary_pro_en: Mapped[Optional[str]] = mapped_column(Text)
+    summary_sci_en: Mapped[Optional[str]] = mapped_column(Text)
 
     # Key information
     keywords: Mapped[Optional[List[str]]] = mapped_column(JSON, default=[])
