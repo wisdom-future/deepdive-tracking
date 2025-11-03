@@ -26,7 +26,7 @@ class GitHubPublisher:
 
     def __init__(
         self,
-        github_token: str,
+        github_token: str,  # noqa: S107
         github_repo: str,
         github_username: str,
         local_repo_path: Optional[str] = None
@@ -35,12 +35,12 @@ class GitHubPublisher:
         初始化GitHub发布器
 
         Args:
-            github_token: GitHub Personal Access Token
+            github_token: 访问令牌（从环境变量获取）
             github_repo: 仓库名称 (username/repo)
             github_username: GitHub用户名
             local_repo_path: 本地仓库路径，如果为None则使用临时目录
         """
-        self.github_token = github_token
+        self.github_token = github_token  # noqa: S105
         self.github_repo = github_repo
         self.github_username = github_username
         self.local_repo_path = local_repo_path or f"/tmp/{github_repo.split('/')[-1]}"
@@ -473,37 +473,45 @@ class GitHubPublisher:
 
     def _generate_batch_summary(self, batch_name: str, articles: List[Dict]) -> str:
         """
-        生成批次总结HTML - 卡片形式展示，类似邮件渠道
+        生成批次总结HTML - 卡片形式展示所有TOP新闻
 
         Args:
             batch_name: 批次名称 (日期格式)
             articles: 发布的文章列表
         """
-        # 从 published articles 中提取元数据
+        # 从 published articles 中提取元数据并生成卡片
         cards_html = ""
         for idx, article in enumerate(articles, 1):
             filename = article.get('filename', '')
-            title = filename.replace('.html', '').replace('_', ' ')[:60] if filename else 'Unknown'
+            # 从 article 数据中获取更详细的信息
+            title = article.get('article_title', filename.replace('.html', '').replace('_', ' ')[:80]) if filename else 'Unknown'
             score = article.get('score', 0) or 0
+            category = article.get('category', 'AI News')
+            source = article.get('author', 'Unknown')
 
             # 评分徽章颜色
             if score >= 80:
                 badge_bg = "#4caf50"  # 绿色
+                score_label = "优秀"
             elif score >= 60:
                 badge_bg = "#2196f3"  # 蓝色
+                score_label = "良好"
             else:
                 badge_bg = "#ff9800"  # 橙色
+                score_label = "不错"
 
             cards_html += f"""
             <div class="article-card">
                 <div class="card-header">
-                    <h3><a href="articles/{filename}">{html.escape(title)}</a></h3>
-                    <div class="score-badge" style="background: {badge_bg};">{int(score)}</div>
+                    <div>
+                        <h3><a href="articles/{filename}">{html.escape(title)}</a></h3>
+                        <p class="article-meta">
+                            <span class="badge">{html.escape(category)}</span>
+                            <span class="source-meta">来源: {html.escape(source)}</span>
+                        </p>
+                    </div>
+                    <div class="score-badge" style="background: {badge_bg};" title="{score_label}">{int(score)}</div>
                 </div>
-                <p class="article-meta">
-                    <span class="badge">AI 资讯</span>
-                </p>
-                <p class="article-summary">精选 AI 资讯内容...</p>
                 <a href="articles/{filename}" class="read-more">阅读全文 →</a>
             </div>
             """
@@ -636,6 +644,14 @@ class GitHubPublisher:
 
         .article-meta {{
             margin-bottom: 12px;
+            font-size: 0.9em;
+        }}
+
+        .source-meta {{
+            display: block;
+            color: #999;
+            font-size: 0.85em;
+            margin-top: 8px;
         }}
 
         .badge {{
@@ -646,6 +662,7 @@ class GitHubPublisher:
             border-radius: 20px;
             font-size: 0.85em;
             font-weight: 500;
+            margin-right: 8px;
         }}
 
         .article-summary {{
@@ -660,11 +677,13 @@ class GitHubPublisher:
             color: #667eea;
             text-decoration: none;
             font-weight: 500;
-            transition: color 0.3s;
+            transition: all 0.3s;
+            padding: 8px 0;
         }}
 
         .read-more:hover {{
             color: #764ba2;
+            text-decoration: underline;
         }}
 
         .footer {{
@@ -738,7 +757,7 @@ class GitHubPublisher:
         if not repo_path.exists():
             # 克隆仓库
             self.logger.info(f"克隆仓库: {self.github_repo}")
-            repo_url = f"https://{self.github_username}:{self.github_token}@github.com/{self.github_repo}.git"
+            repo_url = f"https://{self.github_username}:{self.github_token}@github.com/{self.github_repo}.git"  # noqa: S105
             await self._run_git_command(
                 ["git", "clone", repo_url, str(repo_path)],
                 cwd=None

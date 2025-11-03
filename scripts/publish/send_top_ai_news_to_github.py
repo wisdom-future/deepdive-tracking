@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """
-Send TOP AI News to GitHub - Publish TOP AI articles as HTML to a GitHub repository
+Send TOP AI News to GitHub - Publish TOP news items as consolidated HTML to a GitHub repository
 
-This script publishes the highest-scored AI articles to GitHub as HTML pages.
-It creates a beautiful index page and article pages, then commits and pushes to the repo.
+This script publishes the highest-scored news articles to GitHub as beautifully
+formatted HTML pages. It creates a consolidated daily digest page displaying all
+TOP news items in one page, then commits and pushes to the repo.
 """
 import sys
 import os
@@ -21,52 +22,17 @@ from sqlalchemy.orm import joinedload
 from src.database.connection import get_session
 
 
-# AI-related keywords and categories
-AI_KEYWORDS = {
-    'ai', 'artificial intelligence', 'machine learning', 'deep learning',
-    'llm', 'large language model', 'generative ai', 'neural network',
-    'ml', 'nlp', 'computer vision', 'transformer', 'bert', 'gpt',
-    'openai', 'google', 'anthropic', 'meta ai', 'mistral',
-    'algorithm', 'data science', 'model', 'training', 'inference',
-    'chatgpt', 'claude', 'gemini', 'copilot', 'agent', 'rag',
-    'embedding', 'vector', 'diffusion', 'vision model', 'robotics',
-}
-
-
-def is_ai_related(news: ProcessedNews) -> bool:
-    """Check if a news article is AI-related"""
-    if not news.raw_news:
-        return False
-
-    # Check category
-    category = (news.category or "").lower()
-    if any(keyword in category for keyword in ['ai', 'machine', 'deep', 'ml', 'llm']):
-        return True
-
-    # Check title
-    title = (news.raw_news.title or "").lower()
-    if any(keyword in title for keyword in AI_KEYWORDS):
-        return True
-
-    # Check summary
-    summary = (news.summary_pro or news.summary_sci or "").lower()
-    if summary and any(keyword in summary for keyword in AI_KEYWORDS):
-        return True
-
-    return False
-
-
 async def main():
-    """Send TOP AI news to GitHub"""
+    """Send TOP news to GitHub"""
     settings = get_settings()
 
     print("=" * 70)
-    print("TOP AI NEWS TO GITHUB - Publishing AI Articles")
+    print("TOP NEWS TO GITHUB - Publishing TOP Articles to GitHub Pages")
     print("=" * 70)
 
     # Check GitHub configuration
     print("\n1. Checking GitHub configuration...")
-    if not settings.github_token or settings.github_token == "your_github_token":
+    if not settings.github_token or settings.github_token == "your_github_token":  # noqa: S105
         print("[WARNING] GitHub token not configured")
         print("  Please set GITHUB_TOKEN in your .env file")
         print("  Get a token from: https://github.com/settings/tokens")
@@ -84,7 +50,7 @@ async def main():
         print("  Please set GITHUB_USERNAME in your .env file")
         return False
 
-    print(f"[OK] GitHub configured")
+    print("[OK] GitHub configured")  # noqa: S105
     print(f"    Repo: {settings.github_repo}")
     print(f"    Username: {settings.github_username}")
 
@@ -104,32 +70,28 @@ async def main():
         traceback.print_exc()
         return False
 
-    # Fetch all news and filter AI-related ones
-    print("\n3. Fetching and filtering AI-related news...")
+    # Fetch TOP news from database
+    print("\n3. Fetching TOP news from database...")
     try:
         session = get_session()
 
-        # Get all news sorted by score
-        all_news = session.query(ProcessedNews).options(
+        # Get top 10 news items by score with eager loading of raw_news relationship
+        top_news = session.query(ProcessedNews).options(
             joinedload(ProcessedNews.raw_news)
-        ).order_by(desc(ProcessedNews.score)).limit(100).all()
-
-        # Filter AI-related articles
-        ai_news = [news for news in all_news if is_ai_related(news)]
+        ).order_by(
+            desc(ProcessedNews.score)
+        ).limit(10).all()
 
         session.close()
 
-        if not ai_news:
-            print("[WARNING] No AI-related news found in the database")
+        if not top_news:
+            print("[WARNING] No news found in the database")
             print("Please run news collection first: python scripts/01-collection/collect_news.py")
             return False
 
-        # Limit to top 5 AI articles for GitHub
-        top_ai_news = ai_news[:5]
-
-        print(f"[OK] Found {len(top_ai_news)} AI-related news items (out of {len(all_news)} total)")
-        for idx, news in enumerate(top_ai_news, 1):
-            title = news.raw_news.title if news.raw_news else "Unknown"
+        print(f"[OK] Found {len(top_news)} news items")
+        for idx, news in enumerate(top_news, 1):
+            title = news.raw_news.title if news.raw_news else "Unknown Title"
             score = news.score or 0
             print(f"    {idx}. {title[:60]} (Score: {score})")
 
@@ -139,46 +101,58 @@ async def main():
         traceback.print_exc()
         return False
 
-    # Publish articles to GitHub
-    print("\n4. Publishing TOP AI News to GitHub...")
+    # Prepare articles for GitHub
+    print("\n4. Preparing articles for GitHub publishing...")
+    articles = []
+    for idx, news in enumerate(top_news, 1):
+        if not news.raw_news:
+            continue
+
+        summary = news.summary_pro or news.summary_sci or "No summary available"
+        source_url = news.raw_news.url or "https://deepdive-tracking.github.io"
+        author = news.raw_news.source_name or news.raw_news.author or "Unknown Source"
+        score = news.score or 0
+        content = news.raw_news.content or summary
+
+        article = {
+            "title": news.raw_news.title or "Untitled",
+            "summary": summary,
+            "content": content,
+            "source_url": source_url,
+            "score": float(score),
+            "category": news.category or "AI News",
+            "author": author,
+            "published_at": datetime.now().isoformat(),
+        }
+        articles.append(article)
+
+    print(f"[OK] Prepared {len(articles)} articles for publishing")
+
+    # Publish articles to GitHub with consolidated daily digest
+    print("\n5. Publishing TOP News to GitHub...")
     try:
-        # Prepare articles for GitHub
-        articles = []
-        for idx, news in enumerate(top_ai_news, 1):
-            if not news.raw_news:
-                continue
+        # Use batch publishing to create consolidated digest page
+        batch_date = datetime.now().strftime("%Y-%m-%d")
+        result = await publisher.publish_batch_articles(
+            articles=articles,
+            batch_name=batch_date
+        )
 
-            article = {
-                "title": news.raw_news.title or "Untitled",
-                "summary": news.summary_pro or news.summary_sci or "No summary",
-                "url": news.raw_news.url or "#",
-                "score": float(news.score or 0),
-                "category": news.category or "AI News",
-                "source": news.raw_news.source_name or news.raw_news.author or "Unknown",
-                "content": news.raw_news.content or "No content available",
-                "published_at": datetime.now().isoformat(),
-            }
-            articles.append(article)
-
-        # Try to publish (this may fail if repo not accessible)
-        print(f"    Attempting to publish {len(articles)} articles...")
-
-        # Note: The actual publish_article method would need to be called here
-        # This is a demonstration of what would happen
-        print(f"[INFO] To complete GitHub publishing:")
-        print(f"  1. Set up GitHub token in .env (GITHUB_TOKEN)")
-        print(f"  2. Set up repository (GITHUB_REPO)")
-        print(f"  3. Run this script again")
-
-        # For now, just show success since we can't test without real credentials
-        print(f"\n[OK] GitHub publishing configuration verified")
-        print(f"    Ready to publish {len(articles)} articles")
-
-        return True
+        if result.get("success"):
+            print(f"\n[OK] Successfully published {result.get('published_count')} articles to GitHub")
+            print(f"    Batch URL: {result.get('batch_url')}")
+            print(f"\nYou can view the published news at:")
+            print(f"  https://github.com/{settings.github_repo}")
+            return True
+        else:
+            error_msg = result.get("error", "Unknown error")
+            print(f"\n[WARNING] Publishing returned: {error_msg}")
+            print(f"  Published: {result.get('published_count')}")
+            print(f"  Failed: {result.get('failed_count')}")
+            return False
 
     except Exception as e:
-        print(f"[WARNING] Exception during GitHub operation: {e}")
-        print(f"[INFO] This is expected if GitHub credentials are not configured")
+        print(f"[FAILED] Exception during GitHub publishing: {e}")
         import traceback
         traceback.print_exc()
         return False
