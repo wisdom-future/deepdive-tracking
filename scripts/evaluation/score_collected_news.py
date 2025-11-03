@@ -29,20 +29,18 @@ if sys.stdout.encoding != 'utf-8':
 project_root = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(project_root))
 
-from sqlalchemy.orm import sessionmaker
 from src.config import get_settings
 from src.models import RawNews, ProcessedNews
 from src.services.ai import ScoringService
-from src.database.connection import engine
+from src.database.connection import get_session
 
 async def main():
     """Main scoring function"""
     max_count = int(sys.argv[1]) if len(sys.argv) > 1 else 50
 
     settings = get_settings()
-    # Use the lazy-loaded engine proxy that supports Cloud SQL Connector
-    Session = sessionmaker(bind=engine)
-    session = Session()
+    # Use get_session() which supports Cloud SQL Connector proxy
+    session = get_session()
 
     print("\n" + "=" * 80)
     print("DeepDive Tracking - Score Collected News")
