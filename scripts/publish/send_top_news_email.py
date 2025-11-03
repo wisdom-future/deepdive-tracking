@@ -43,7 +43,7 @@ async def main():
             smtp_host=settings.smtp_host,
             smtp_port=settings.smtp_port,
             smtp_user=settings.smtp_user,
-            smtp_password=settings.smtp_password,
+            smtp_password=settings.smtp_password,  # noqa: S105
             from_email=settings.smtp_from_email,
             from_name=settings.smtp_from_name
         )
@@ -86,66 +86,97 @@ async def main():
         traceback.print_exc()
         return False
 
-    # Send TOP news email
-    print("\n4. Sending TOP news email...")
+    # Send TOP news email (all content in one email)
+    print("\n4. Sending TOP news email (all content in one email)...")
     recipient_email = settings.smtp_from_email or "hello.junjie.duan@gmail.com"
     print(f"    Recipient: {recipient_email}")
 
-    sent_count = 0
-    failed_count = 0
-
     try:
-        # Send each top news item
+        # Build combined email content with all news items
+        email_content_lines = [
+            "<!DOCTYPE html>",
+            "<html>",
+            "<head>",
+            '<meta charset="UTF-8">',
+            "<style>",
+            "body { font-family: Arial, sans-serif; color: #333; }",
+            "h1 { color: #1a73e8; border-bottom: 3px solid #1a73e8; padding-bottom: 10px; }",
+            ".news-item { margin: 20px 0; padding: 15px; border-left: 4px solid #1a73e8; background: #f9f9f9; }",
+            ".news-title { font-size: 18px; font-weight: bold; color: #1a73e8; margin-bottom: 8px; }",
+            ".news-score { display: inline-block; background: #4285f4; color: white; padding: 5px 10px; border-radius: 3px; margin-bottom: 10px; font-weight: bold; }",
+            ".news-summary { margin: 10px 0; line-height: 1.6; }",
+            ".news-meta { color: #666; font-size: 12px; margin-top: 10px; }",
+            ".news-link { color: #1a73e8; text-decoration: none; }",
+            ".news-link:hover { text-decoration: underline; }",
+            ".footer { margin-top: 30px; padding-top: 20px; border-top: 1px solid #ddd; color: #666; font-size: 12px; }",
+            "</style>",
+            "</head>",
+            "<body>",
+            f"<h1>📰 AI News Daily Digest - {datetime.now().strftime('%Y-%m-%d')}</h1>",
+            f"<p>Here are the top {len(top_news)} AI news items for today:</p>"
+        ]
+
+        # Add all news items to the email content
         for idx, news in enumerate(top_news, 1):
             if not news.raw_news:
-                print(f"\n    Skipping news {idx}/{len(top_news)}: No raw_news relationship")
-                failed_count += 1
                 continue
 
-            title = news.raw_news.title[:50] if news.raw_news.title else "Unknown"
-            print(f"\n    Sending news {idx}/{len(top_news)}: {title}...")
+            summary = news.summary_pro or news.summary_sci or "No summary available"
+            source_url = news.raw_news.url or "https://deepdive-tracking.github.io"
+            author = news.raw_news.source_name or news.raw_news.author or "Unknown Source"
+            score = news.score or 0
 
-            try:
-                # Use summary_pro for professional summary, or raw content
-                summary = news.summary_pro or news.summary_sci or "No summary available"
-                content = news.raw_news.content or "No content available"
-                author = news.raw_news.source_name or news.raw_news.author or "Unknown Source"
-                source_url = news.raw_news.url or "https://deepdive-tracking.github.io"
+            email_content_lines.extend([
+                '<div class="news-item">',
+                f'<div class="news-title">{idx}. {news.raw_news.title}</div>',
+                f'<div class="news-score">Score: {score}/100</div>',
+                f'<div class="news-summary">{summary}</div>',
+                '<div class="news-meta">',
+                f'📌 Category: {news.category or "AI News"} | ',
+                f'📝 Source: {author} | ',
+                f'🔗 <a class="news-link" href="{source_url}" target="_blank">Read full article</a>',
+                '</div>',
+                '</div>'
+            ])
 
-                result = await publisher.publish_article(
-                    title=news.raw_news.title,
-                    content=content,
-                    summary=summary,
-                    author=author,
-                    source_url=source_url,
-                    score=float(news.score or 0),
-                    category=news.category or "AI News",
-                    email_list=[recipient_email]
-                )
+        # Add footer
+        email_content_lines.extend([
+            '<div class="footer">',
+            '<p>This is an automated email from DeepDive Tracking AI News Platform.</p>',
+            '<p><a class="news-link" href="https://deepdive-tracking.github.io">View all news online</a></p>',
+            '</div>',
+            '</body>',
+            '</html>'
+        ])
 
-                if result and result.get("success"):
-                    print(f"        [OK] Email sent successfully")
-                    sent_count += 1
-                else:
-                    error_msg = result.get("error", "Unknown error") if isinstance(result, dict) else "Unknown error"
-                    print(f"        [WARNING] Email send returned: {error_msg}")
-                    failed_count += 1
+        html_content = "\n".join(email_content_lines)
 
-            except Exception as e:
-                print(f"        [WARNING] Failed to send news {idx}: {e}")
-                failed_count += 1
+        # Send the combined email
+        result = await publisher.publish_article(
+            title=f"AI News Daily Digest - {datetime.now().strftime('%Y-%m-%d')} ({len(top_news)} items)",
+            content=html_content,
+            summary=f"Today's top {len(top_news)} AI news items",
+            author="DeepDive Tracking",
+            source_url="https://deepdive-tracking.github.io",
+            score=0,
+            category="Daily Digest",
+            email_list=[recipient_email],
+            is_html=True
+        )
 
         print("\n" + "=" * 70)
         print("TOP NEWS EMAIL SENDING COMPLETE")
         print("=" * 70)
-        print(f"\nResults:")
-        print(f"  Successfully sent: {sent_count}/{len(top_news)} emails")
-        if failed_count > 0:
-            print(f"  Failed: {failed_count}/{len(top_news)} emails")
-        print(f"\nEmails sent to: {recipient_email}")
-        print("Please check your inbox for the AI news emails.")
 
-        return True
+        if result and result.get("success"):
+            print(f"\n[OK] Successfully sent combined email with {len(top_news)} news items")
+            print(f"Recipients: {recipient_email}")
+            print("Please check your inbox for the AI news digest.")
+            return True
+        else:
+            error_msg = result.get("error", "Unknown error") if isinstance(result, dict) else "Unknown error"
+            print(f"\n[WARNING] Email send returned: {error_msg}")
+            return False
 
     except Exception as e:
         print(f"[FAILED] Exception during send: {e}")
