@@ -11,8 +11,34 @@ RUN apt-get update && apt-get install -y \
 # Copy application code first
 COPY . .
 
-# Install Python dependencies from pyproject.toml
-RUN pip install --no-cache-dir -e .
+# Install Python dependencies
+RUN pip install --no-cache-dir \
+    fastapi \
+    uvicorn[standard] \
+    sqlalchemy \
+    psycopg2-binary \
+    redis \
+    requests \
+    pydantic-settings \
+    pydantic \
+    python-multipart \
+    openai \
+    celery \
+    httpx \
+    google-cloud-secret-manager \
+    feedparser \
+    beautifulsoup4 \
+    lxml \
+    python-dotenv \
+    aiohttp \
+    alembic \
+    simhash \
+    pytz \
+    loguru \
+    python-dateutil \
+    langchain \
+    numpy \
+    scikit-learn
 
 # Expose port 8080 (Cloud Run standard)
 EXPOSE 8080
