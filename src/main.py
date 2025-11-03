@@ -287,11 +287,11 @@ def create_app() -> FastAPI:
                 processed = ProcessedNews(
                     raw_news_id=raw_news.id,
                     score=75,  # Test score
-                    category="AI News",
-                    summary_pro=f"Professional summary of: {raw_news.title[:100]}",
+                    category="tech_breakthrough",
+                    summary_pro=f"Professional summary of: {raw_news.title[:100] if raw_news.title else 'Article'}",
                     summary_sci="This is a test processed record created for email testing",
-                    should_publish=True,
-                    processing_status="completed"
+                    keywords=["AI", "test"],
+                    confidence=0.85
                 )
                 session.add(processed)
                 created_count += 1
