@@ -172,6 +172,7 @@ main() {
         "--set-env-vars" "APP_ENV=production"
         "--set-env-vars" "DEBUG=False"
         "--set-env-vars" "LOG_LEVEL=INFO"
+        "--vpc-connector" "deepdive-vpc-connector"
     )
 
     if [[ "$SKIP_BUILD" == true ]]; then

@@ -26,7 +26,11 @@ RUN pip install --no-cache-dir \
     openai==1.3.5 \
     celery==5.3.4 \
     httpx==0.25.2 \
-    google-cloud-secret-manager==2.25.0
+    google-cloud-secret-manager==2.25.0 \
+    feedparser==6.0.10 \
+    beautifulsoup4==4.12.2 \
+    lxml==4.9.4 \
+    python-dotenv==1.0.0
 
 # Expose port 8080 (Cloud Run standard)
 EXPOSE 8080
