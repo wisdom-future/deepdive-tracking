@@ -1,0 +1,74 @@
+# Git and VCS
+.git
+.gitignore
+.github
+.gitattributes
+
+# Python
+__pycache__
+*.py[cod]
+*$py.class
+*.egg-info/
+.eggs/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual environments
+venv/
+env/
+ENV/
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Test coverage
+.coverage
+.pytest_cache/
+htmlcov/
+
+# Logs
+logs/
+*.log
+
+# Node modules (if any)
+node_modules/
+
+# Data
+data/
+temp/
+tmp/
+
+# GitHub clone directory
+github_repo/
+
+# Cache
+.cache
+.mypy_cache
+.pytest_cache
+dist/
+
+# Documentation
+docs/_build/
