@@ -165,13 +165,17 @@ main() {
         "--cpu" "1"
         "--timeout" "900"
         "--allow-unauthenticated"
-        "--set-env-vars" "DATABASE_URL=postgresql://deepdive_user:deepdive_password@localhost:5432/deepdive_db"
+        "--set-env-vars" "DATABASE_URL=postgresql://deepdive_user:deepdive_password@/deepdive_db"
+        "--set-env-vars" "CLOUDSQL_USER=deepdive_user"
+        "--set-env-vars" "CLOUDSQL_PASSWORD=deepdive_password"
+        "--set-env-vars" "CLOUDSQL_DATABASE=deepdive_db"
         "--set-env-vars" "REDIS_URL=redis://10.240.18.115:6379/0"
         "--set-env-vars" "CELERY_BROKER_URL=redis://10.240.18.115:6379/1"
         "--set-env-vars" "CELERY_RESULT_BACKEND=redis://10.240.18.115:6379/2"
         "--set-env-vars" "APP_ENV=production"
         "--set-env-vars" "DEBUG=False"
         "--set-env-vars" "LOG_LEVEL=INFO"
+        "--service-account" "726493701291-compute@developer.gserviceaccount.com"
     )
 
     if [[ "$SKIP_BUILD" == true ]]; then

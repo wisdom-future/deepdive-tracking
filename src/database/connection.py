@@ -3,6 +3,9 @@
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
 from typing import Optional
+import os
+import sys
+import traceback
 
 from src.config import get_settings
 
@@ -16,22 +19,129 @@ def _init_db():
     global _engine, _SessionLocal
     if _engine is None:
         settings = get_settings()
-        connect_args = {"connect_timeout": 5}  # 5 second timeout
-        if "sqlite" not in settings.database_url:
-            # PostgreSQL-specific arguments
-            connect_args["connect_timeout"] = 5
 
+        # Check if running in Cloud Run environment
+        # Cloud Run sets K_SERVICE env var, or we can check for localhost in DB URL
+        is_cloud_run = os.getenv("K_SERVICE") or os.getenv("CLOUD_RUN")
+
+        # Also check if DATABASE_URL looks like a Unix socket or doesn't have host
+        if is_cloud_run or (settings.database_url and "@/" in settings.database_url):
+            print("[DB] Detected Cloud Run environment")
+            _init_db_cloud_sql(settings)
+        else:
+            _init_db_direct(settings)
+
+
+def _init_db_cloud_sql(settings):
+    """Initialize database with Cloud SQL Python Connector for Cloud Run."""
+    global _engine, _SessionLocal
+
+    try:
+        print("[DB] Attempting to import Cloud SQL Connector...")
+        from google.cloud.sql.connector import Connector, IPTypes
+
+        print("[DB] Initializing Cloud SQL Connector for Cloud Run")
+        print(f"[DB] Connection string: deepdive-engine:asia-east1:deepdive-db")
+        print(f"[DB] Database user: deepdive_user")
+
+        # Determine IP type: try PRIVATE first, fallback to PUBLIC if needed
+        ip_type = IPTypes.PRIVATE
+        print(f"[DB] Using IPTypes.PRIVATE for VPC connection")
+
+        # Create connector - this handles all authentication via GCP service account
+        print("[DB] Creating Connector instance...")
+        connector = Connector()
+        print("[DB] Connector created successfully")
+
+        def getconn():
+            """Get a connection from Cloud SQL Connector."""
+            print("[DB] getconn() called - requesting connection from Cloud SQL Connector")
+            # Get credentials from environment variables (NOT hardcoded)
+            db_user = os.getenv("CLOUDSQL_USER", "deepdive_user")  # default user
+            db_password = os.getenv("CLOUDSQL_PASSWORD", "")  # password from env var only
+            db_name = os.getenv("CLOUDSQL_DATABASE", "deepdive_db")
+
+            try:
+                return connector.connect(
+                    "deepdive-engine:asia-east1:deepdive-db",
+                    "pg8000",
+                    user=db_user,
+                    password=db_password,  # from env var, not hardcoded
+                    db=db_name,
+                    ip_type=ip_type,
+                )
+            except Exception as conn_err:
+                print(f"[DB] ERROR in getconn() with {ip_type}: {conn_err}", file=sys.stderr)
+                # If PRIVATE IP fails, try PUBLIC
+                if ip_type == IPTypes.PRIVATE:
+                    print("[DB] Retrying with PUBLIC IP...", file=sys.stderr)
+                    return connector.connect(
+                        "deepdive-engine:asia-east1:deepdive-db",
+                        "pg8000",
+                        user=db_user,
+                        password=db_password,  # from env var, not hardcoded
+                        db=db_name,
+                        ip_type=IPTypes.PUBLIC,
+                    )
+                raise
+
+        # Create engine with Cloud SQL Connector
+        print("[DB] Creating SQLAlchemy engine with Cloud SQL Connector...")
         _engine = create_engine(
-            settings.database_url,
+            "postgresql+pg8000://",
+            creator=getconn,
             pool_size=settings.database_pool_size,
             max_overflow=settings.database_max_overflow,
             pool_timeout=settings.database_pool_timeout,
             echo=settings.debug,
-            connect_args=connect_args,
+            pool_pre_ping=True,  # Test connections before using
         )
+        print("[DB] SQLAlchemy engine created successfully")
+
         _SessionLocal = sessionmaker(
             autocommit=False, autoflush=False, bind=_engine
         )
+        print("[DB] Cloud SQL Connector initialized successfully")
+
+    except ImportError as e:
+        print(f"[DB] ERROR: Failed to import Cloud SQL Connector: {e}", file=sys.stderr)
+        traceback.print_exc(file=sys.stderr)
+        print(f"[DB] Falling back to direct connection", file=sys.stderr)
+        _init_db_direct(settings)
+    except Exception as e:
+        print(f"[DB] ERROR: Failed to initialize Cloud SQL Connector: {e}", file=sys.stderr)
+        print(f"[DB] Exception type: {type(e).__name__}", file=sys.stderr)
+        traceback.print_exc(file=sys.stderr)
+        print(f"[DB] Falling back to direct connection", file=sys.stderr)
+        _init_db_direct(settings)
+
+
+def _init_db_direct(settings):
+    """Initialize database with direct connection (for local development)."""
+    global _engine, _SessionLocal
+
+    print(f"[DB] Initializing direct database connection")
+    print(f"[DB] Database URL: {settings.database_url[:50]}...")
+
+    connect_args = {}
+    if "sqlite" not in settings.database_url:
+        # PostgreSQL-specific arguments
+        connect_args["connect_timeout"] = 5
+
+    _engine = create_engine(
+        settings.database_url,
+        pool_size=settings.database_pool_size,
+        max_overflow=settings.database_max_overflow,
+        pool_timeout=settings.database_pool_timeout,
+        echo=settings.debug,
+        connect_args=connect_args,
+        pool_pre_ping=True,  # Verify connections are alive
+    )
+
+    _SessionLocal = sessionmaker(
+        autocommit=False, autoflush=False, bind=_engine
+    )
+    print("[DB] Direct database connection initialized")
 
 
 class _SessionLocalProxy:
