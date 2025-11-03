@@ -68,27 +68,60 @@ def generate_bilingual_email_html(news_items: list, date_str: str) -> str:
         else:
             color = "#ef4444"
 
+        # Table-based layout for better email client compatibility
         item_html = f"""
-<div style="margin-bottom:25px;padding:20px;border-left:4px solid {color};background:#f9fafb;border-radius:4px;">
-  <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;gap:10px;">
-    <h3 style="margin:0;font-size:16px;font-weight:600;color:#1f2937;flex:1;line-height:1.5;">{idx}. {news.raw_news.title}</h3>
-    <span style="display:inline-block;background:{color};color:white;padding:5px 12px;border-radius:4px;font-size:13px;font-weight:600;white-space:nowrap;">{int(score)}</span>
-  </div>
+<table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin-bottom:25px;">
+  <tr>
+    <td style="border-left:4px solid {color};background:#f9fafb;padding:20px;">
+      <!-- Title and Score Row -->
+      <table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin-bottom:15px;">
+        <tr>
+          <td style="font-size:16px;font-weight:600;color:#1f2937;line-height:1.5;padding-right:15px;">
+            {idx}. {news.raw_news.title}
+          </td>
+          <td align="right" valign="top" style="background:{color};color:white;padding:5px 12px;border-radius:4px;font-size:13px;font-weight:600;white-space:nowrap;width:50px;">
+            {int(score)}
+          </td>
+        </tr>
+      </table>
 
-  <div style="margin-bottom:10px;color:#4b5563;font-size:14px;line-height:1.6;">
-    <div style="margin-bottom:3px;"><strong>📌 摘要（中文）:</strong></div>
-    <div style="margin-bottom:10px;">{summary_zh}</div>
-    <div style="margin-bottom:3px;"><strong>📄 Summary (English):</strong></div>
-    <div style="margin-bottom:10px;">{summary_en}</div>
-  </div>
+      <!-- Summary Section -->
+      <table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin-bottom:15px;">
+        <tr>
+          <td style="color:#4b5563;font-size:14px;line-height:1.6;">
+            <p style="margin:0 0 8px 0;"><strong>📌 摘要（中文）:</strong></p>
+            <p style="margin:0 0 15px 0;">{summary_zh}</p>
+            <p style="margin:0 0 8px 0;"><strong>📄 Summary (English):</strong></p>
+            <p style="margin:0;">{summary_en}</p>
+          </td>
+        </tr>
+      </table>
 
-  <div style="display:flex;gap:15px;flex-wrap:wrap;font-size:13px;color:#6b7280;margin-bottom:12px;">
-    <div>📂 {category}</div>
-    <div>✍️ {author}</div>
-  </div>
+      <!-- Category and Author Row -->
+      <table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin-bottom:15px;">
+        <tr>
+          <td style="font-size:13px;color:#6b7280;padding-right:20px;">
+            📂 {category}
+          </td>
+          <td style="font-size:13px;color:#6b7280;">
+            ✍️ {author}
+          </td>
+        </tr>
+      </table>
 
-  <a href="{source_url}" target="_blank" style="display:inline-block;color:{color};text-decoration:none;font-weight:600;border-bottom:1px solid {color};">阅读全文 / Read More →</a>
-</div>
+      <!-- Read More Link -->
+      <table width="100%" border="0" cellspacing="0" cellpadding="0">
+        <tr>
+          <td>
+            <a href="{source_url}" target="_blank" style="color:{color};text-decoration:none;font-weight:600;border-bottom:1px solid {color};display:inline-block;">
+              阅读全文 / Read More →
+            </a>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+</table>
 """
         news_items_html.append(item_html)
 
@@ -97,6 +130,8 @@ def generate_bilingual_email_html(news_items: list, date_str: str) -> str:
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="x-apple-disable-message-reformatting">
+    <meta name="format-detection" content="telephone=no,date=no,address=no,email=no">
     <title>AI News Digest - {date_str}</title>
     <style>
         * {{
@@ -109,22 +144,28 @@ def generate_bilingual_email_html(news_items: list, date_str: str) -> str:
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
             line-height: 1.6;
             color: #1f2937;
-            background: #ffffff;
+            background: #f3f4f6;
             padding: 0;
+            min-height: 100vh;
+        }}
+
+        .wrapper {{
+            width: 100%;
+            background: #f3f4f6;
+            padding: 20px 0;
         }}
 
         .container {{
             max-width: 600px;
             margin: 0 auto;
-            padding: 20px;
+            background: #ffffff;
+            width: 100%;
         }}
 
         .header {{
             background: linear-gradient(135deg, #1f2937 0%, #374151 100%);
             color: white;
             padding: 30px 20px;
-            border-radius: 8px;
-            margin-bottom: 30px;
             text-align: center;
         }}
 
@@ -132,33 +173,37 @@ def generate_bilingual_email_html(news_items: list, date_str: str) -> str:
             font-size: 24px;
             font-weight: 700;
             margin-bottom: 10px;
+            line-height: 1.3;
         }}
 
         .header-info {{
             font-size: 13px;
             opacity: 0.9;
+            line-height: 1.4;
         }}
 
-        .news-item {{
-            margin-bottom: 30px;
+        .content {{
             padding: 20px;
-            border-left: 4px solid #3b82f6;
-            background: #f9fafb;
-            border-radius: 4px;
         }}
 
         .footer {{
             text-align: center;
-            padding-top: 20px;
-            margin-top: 30px;
+            padding: 20px;
             border-top: 1px solid #e5e7eb;
             font-size: 12px;
             color: #6b7280;
+            background: #f9fafb;
         }}
 
-        @media (max-width: 480px) {{
-            .container {{
-                padding: 10px;
+        .footer p {{
+            margin: 5px 0;
+            line-height: 1.5;
+        }}
+
+        /* Mobile optimization */
+        @media (max-width: 600px) {{
+            .wrapper {{
+                padding: 10px 0;
             }}
 
             .header {{
@@ -169,28 +214,83 @@ def generate_bilingual_email_html(news_items: list, date_str: str) -> str:
                 font-size: 20px;
             }}
 
-            .news-item {{
+            .content {{
                 padding: 15px;
-                margin-bottom: 20px;
+            }}
+
+            .footer {{
+                padding: 15px;
+                font-size: 11px;
+            }}
+
+            table[width="100%"] {{
+                width: 100% !important;
+            }}
+
+            td {{
+                display: block;
+                width: 100% !important;
+                text-align: left !important;
+                padding: 10px 0 !important;
+            }}
+
+            .title-row td:last-child {{
+                text-align: right !important;
+                padding: 0 !important;
+                width: auto !important;
+            }}
+        }}
+
+        /* iPad/Tablet optimization */
+        @media (min-width: 601px) and (max-width: 900px) {{
+            .container {{
+                max-width: 95%;
+            }}
+
+            .header {{
+                padding: 25px 20px;
+            }}
+
+            .header h1 {{
+                font-size: 22px;
             }}
         }}
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="header">
-            <h1>📰 AI News Daily Digest</h1>
-            <div class="header-info">
-                Published: {date_str} | Total: {len(news_items)} items | Curated from 300+ sources
-            </div>
-        </div>
+    <div class="wrapper">
+        <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background:#f3f4f6;">
+            <tr>
+                <td align="center" style="padding:20px 0;">
+                    <table width="600" border="0" cellspacing="0" cellpadding="0" style="max-width:100%;background:#ffffff;border-collapse:collapse;">
+                        <!-- Header -->
+                        <tr>
+                            <td style="background:linear-gradient(135deg, #1f2937 0%, #374151 100%);color:white;padding:30px 20px;text-align:center;">
+                                <h1 style="font-size:24px;font-weight:700;margin:0 0 10px 0;line-height:1.3;">📰 AI News Daily Digest</h1>
+                                <p style="font-size:13px;opacity:0.9;margin:0;line-height:1.4;">
+                                    Published: {date_str} | Total: {len(news_items)} items | Curated from 300+ sources
+                                </p>
+                            </td>
+                        </tr>
 
-        {"".join(news_items_html)}
+                        <!-- Content -->
+                        <tr>
+                            <td style="padding:20px;">
+                                {("".join(news_items_html))}
+                            </td>
+                        </tr>
 
-        <div class="footer">
-            <p>Generated by <strong>DeepDive Tracking</strong> - AI News Intelligence Platform</p>
-            <p>© 2025 DeepDive Tracking. All rights reserved.</p>
-        </div>
+                        <!-- Footer -->
+                        <tr>
+                            <td style="border-top:1px solid #e5e7eb;background:#f9fafb;padding:20px;text-align:center;font-size:12px;color:#6b7280;">
+                                <p style="margin:0 0 5px 0;line-height:1.5;">Generated by <strong>DeepDive Tracking</strong> - AI News Intelligence Platform</p>
+                                <p style="margin:0;line-height:1.5;">© 2025 DeepDive Tracking. All rights reserved.</p>
+                            </td>
+                        </tr>
+                    </table>
+                </td>
+            </tr>
+        </table>
     </div>
 </body>
 </html>"""
