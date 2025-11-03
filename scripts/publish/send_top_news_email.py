@@ -31,7 +31,7 @@ def get_summary_with_limit(text: str, max_length: int = 100) -> str:
 
 
 def generate_bilingual_email_html(news_items: list, date_str: str) -> str:
-    """Generate clean, mobile-friendly HTML email with bilingual summaries"""
+    """Generate clean, mobile-friendly HTML email with actual bilingual summaries"""
 
     news_items_html = []
 
@@ -39,12 +39,9 @@ def generate_bilingual_email_html(news_items: list, date_str: str) -> str:
         if not news.raw_news:
             continue
 
-        # Get summaries
-        summary_zh = news.summary_pro or news.summary_sci or "无摘要"
-        summary_zh = get_summary_with_limit(summary_zh, 100)
-
-        # For English summary, use a simple translation note
-        summary_en = f"[AI-generated summary: {summary_zh}]"
+        # Get both summaries - use them as distinct professional and technical perspectives
+        summary_pro = get_summary_with_limit(news.summary_pro or "无摘要", 120)
+        summary_sci = get_summary_with_limit(news.summary_sci or "无摘要", 120)
 
         score = news.score or 0
         source_url = news.raw_news.url or "https://deepdive-tracking.github.io"
@@ -62,17 +59,17 @@ def generate_bilingual_email_html(news_items: list, date_str: str) -> str:
             color = "#ef4444"
 
         item_html = f"""
-<div style="margin-bottom:30px;padding:20px;border-left:4px solid {color};background:#f9fafb;border-radius:4px;">
-  <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;gap:10px;">
-    <h3 style="margin:0;font-size:16px;font-weight:600;color:#1f2937;flex:1;line-height:1.4;">{idx}. {news.raw_news.title}</h3>
-    <span style="display:inline-block;background:{color};color:white;padding:4px 10px;border-radius:4px;font-size:13px;font-weight:600;white-space:nowrap;margin-top:2px;">{score}/100</span>
+<div style="margin-bottom:25px;padding:20px;border-left:4px solid {color};background:#f9fafb;border-radius:4px;">
+  <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;gap:10px;">
+    <h3 style="margin:0;font-size:16px;font-weight:600;color:#1f2937;flex:1;line-height:1.5;">{idx}. {news.raw_news.title}</h3>
+    <span style="display:inline-block;background:{color};color:white;padding:5px 12px;border-radius:4px;font-size:13px;font-weight:600;white-space:nowrap;">{int(score)}</span>
   </div>
 
-  <div style="margin-bottom:12px;color:#4b5563;font-size:14px;line-height:1.6;">
-    <div style="margin-bottom:8px;"><strong>📌 摘要 (Chinese):</strong></div>
-    <div style="margin-bottom:12px;padding-left:0;">{summary_zh}</div>
-    <div style="margin-bottom:8px;"><strong>📌 Summary (English):</strong></div>
-    <div style="opacity:0.8;font-size:13px;">{summary_en}</div>
+  <div style="margin-bottom:10px;color:#4b5563;font-size:14px;line-height:1.6;">
+    <div style="margin-bottom:3px;"><strong>📌 核心观点：</strong></div>
+    <div style="margin-bottom:10px;">{summary_pro}</div>
+    <div style="margin-bottom:3px;"><strong>🔬 技术角度：</strong></div>
+    <div style="margin-bottom:10px;">{summary_sci}</div>
   </div>
 
   <div style="display:flex;gap:15px;flex-wrap:wrap;font-size:13px;color:#6b7280;margin-bottom:12px;">
@@ -80,7 +77,7 @@ def generate_bilingual_email_html(news_items: list, date_str: str) -> str:
     <div>✍️ {author}</div>
   </div>
 
-  <a href="{source_url}" target="_blank" style="display:inline-block;color:{color};text-decoration:none;font-weight:600;border-bottom:1px solid {color};">阅读全文 / Read More →</a>
+  <a href="{source_url}" target="_blank" style="display:inline-block;color:{color};text-decoration:none;font-weight:600;border-bottom:1px solid {color};">阅读全文 →</a>
 </div>
 """
         news_items_html.append(item_html)
