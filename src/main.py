@@ -78,35 +78,46 @@ def create_app() -> FastAPI:
 
         try:
             # Ensure the database connection is initialized (uses Cloud SQL Connector in Cloud Run)
-            from src.database.connection import _init_db
+            from src.database.connection import _init_db, get_database_url
             _init_db()
             logger.info("Database connection initialized via Cloud SQL Connector")
 
+            # Get database URL from our connection config
+            db_url = get_database_url()
+            logger.info(f"Using database URL: {db_url.split('@')[1] if '@' in db_url else 'local'}")
+
             # Get project root directory
             project_root = Path(__file__).parent.parent
-            alembic_dir = project_root / "alembic"
+            alembic_ini = project_root / "alembic.ini"
 
-            if not alembic_dir.exists():
-                logger.error(f"Alembic directory not found: {alembic_dir}")
+            if not alembic_ini.exists():
+                logger.error(f"alembic.ini not found: {alembic_ini}")
                 return {
                     "status": "error",
-                    "message": f"Alembic directory not found: {alembic_dir}",
+                    "message": f"alembic.ini not found: {alembic_ini}",
                     "timestamp": datetime.now().isoformat()
                 }
 
-            logger.info(f"Running Alembic migrations from {alembic_dir}...")
+            logger.info(f"Running Alembic migrations with database URL...")
 
-            # Run alembic upgrade head to apply all pending migrations
+            # Set environment variable for Alembic to use
+            env = os.environ.copy()
+            env["SQLALCHEMY_DATABASE_URL"] = db_url
+
+            # Run alembic upgrade head with the correct database URL
             result = subprocess.run(
                 ["alembic", "upgrade", "head"],
                 cwd=str(project_root),
                 capture_output=True,
                 text=True,
-                timeout=120
+                timeout=120,
+                env=env
             )
 
             logger.info(f"Alembic exit code: {result.returncode}")
             logger.debug(f"Alembic stdout: {result.stdout}")
+            if result.stderr:
+                logger.debug(f"Alembic stderr: {result.stderr}")
 
             if result.returncode == 0:
                 logger.info("Database migrations applied successfully")

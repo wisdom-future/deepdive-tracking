@@ -68,11 +68,21 @@ def run_migrations_online() -> None:
 
     """
     from sqlalchemy import create_engine
-    connectable = engine_from_config(
-        config.get_section(config.config_ini_section, {}),
-        prefix="sqlalchemy.",
-        poolclass=pool.NullPool,
-    )
+
+    # Check if database URL is provided via environment variable (for Cloud Run)
+    # Otherwise fall back to alembic.ini configuration
+    db_url = os.environ.get("SQLALCHEMY_DATABASE_URL")
+
+    if db_url:
+        # Use the environment variable URL (for Cloud Run with Cloud SQL Connector)
+        connectable = create_engine(db_url, poolclass=pool.NullPool)
+    else:
+        # Fall back to alembic.ini configuration
+        connectable = engine_from_config(
+            config.get_section(config.config_ini_section, {}),
+            prefix="sqlalchemy.",
+            poolclass=pool.NullPool,
+        )
 
     with connectable.connect() as connection:
         context.configure(
