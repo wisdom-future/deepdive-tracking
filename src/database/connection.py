@@ -24,11 +24,18 @@ def _init_db():
         # Cloud Run sets K_SERVICE env var, or we can check for localhost in DB URL
         is_cloud_run = os.getenv("K_SERVICE") or os.getenv("CLOUD_RUN")
 
-        # Also check if DATABASE_URL looks like a Unix socket or doesn't have host
-        if is_cloud_run or (settings.database_url and "@/" in settings.database_url):
-            print("[DB] Detected Cloud Run environment")
+        # Check if DATABASE_URL looks like a Unix socket format (contains @/ without host)
+        # This indicates Cloud SQL Unix socket which only works with Cloud SQL Connector in Cloud Run
+        looks_like_cloud_sql_socket = settings.database_url and "@/" in settings.database_url
+
+        print(f"[DB] Environment check: K_SERVICE={os.getenv('K_SERVICE')}, CLOUD_RUN={os.getenv('CLOUD_RUN')}")
+        print(f"[DB] DATABASE_URL pattern: {settings.database_url[:50] if settings.database_url else 'None'}...")
+
+        if is_cloud_run or looks_like_cloud_sql_socket:
+            print("[DB] 🚀 Detected Cloud Run environment - USING Cloud SQL Connector")
             _init_db_cloud_sql(settings)
         else:
+            print("[DB] 🏠 Local environment - using direct connection")
             _init_db_direct(settings)
 
 
@@ -189,6 +196,12 @@ class _EngineProxy:
 
 # Export engine as a lazy-loaded proxy for backward compatibility
 engine = _EngineProxy()
+
+# 🚀 Force immediate initialization in Cloud Run to catch errors early
+# 检测Cloud Run环境并立即初始化，避免延迟初始化导致的问题
+if os.getenv("K_SERVICE") or os.getenv("CLOUD_RUN"):
+    print("[DB] 🔧 Cloud Run detected - initializing database connection immediately...")
+    _init_db()
 
 
 def get_session():
