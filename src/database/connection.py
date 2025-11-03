@@ -189,3 +189,22 @@ class _EngineProxy:
 
 # Export engine as a lazy-loaded proxy for backward compatibility
 engine = _EngineProxy()
+
+
+def get_session():
+    """Get a database session using the proper connection (Cloud SQL Connector or direct).
+
+    This is the recommended way for scripts to get database sessions,
+    as it ensures Cloud SQL Connector is used in Cloud Run.
+
+    Returns:
+        Session: SQLAlchemy database session
+
+    Example:
+        from src.database.connection import get_session
+        session = get_session()
+        items = session.query(MyModel).all()
+    """
+    if _SessionLocal is None:
+        _init_db()
+    return SessionLocal()

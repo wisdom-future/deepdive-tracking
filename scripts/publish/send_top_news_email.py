@@ -13,8 +13,8 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
 from src.services.channels.email.email_publisher import EmailPublisher
 from src.config.settings import get_settings
 from src.models import ProcessedNews, RawNews
-from sqlalchemy import create_engine, desc
-from sqlalchemy.orm import sessionmaker, joinedload
+from sqlalchemy import desc
+from sqlalchemy.orm import joinedload
 
 
 async def main():
@@ -27,6 +27,7 @@ async def main():
 
     # Check SMTP configuration
     print("\n1. Checking SMTP configuration...")
+    # Check SMTP configuration (from env vars, not hardcoded)
     if not settings.smtp_user or not settings.smtp_password:  # noqa: S105
         print("[FAILED] SMTP credentials not configured")
         return False
@@ -56,9 +57,8 @@ async def main():
     # Fetch TOP news from database
     print("\n3. Fetching TOP news from database...")
     try:
-        engine = create_engine(settings.database_url)
-        Session = sessionmaker(bind=engine)
-        session = Session()
+        from src.database.connection import get_session
+        session = get_session()
 
         # Get top 10 news items by score with eager loading of raw_news relationship
         top_news = session.query(ProcessedNews).options(

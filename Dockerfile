@@ -6,12 +6,7 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y \
     build-essential \
     postgresql-client \
-    wget \
     && rm -rf /var/lib/apt/lists/*
-
-# Install Cloud SQL Proxy
-RUN wget https://dl.google.com/cloudsql/cloud_sql_proxy.linux.amd64 -O /usr/local/bin/cloud-sql-proxy && \
-    chmod +x /usr/local/bin/cloud-sql-proxy
 
 # Copy application code first
 COPY . .
@@ -31,6 +26,8 @@ RUN pip install --no-cache-dir \
     celery \
     httpx \
     google-cloud-secret-manager \
+    cloud-sql-python-connector \
+    pg8000 \
     feedparser \
     beautifulsoup4 \
     lxml \
@@ -48,7 +45,5 @@ RUN pip install --no-cache-dir \
 # Expose port 8080 (Cloud Run standard)
 EXPOSE 8080
 
-# Run with Cloud SQL Proxy and Uvicorn
-# The proxy connects to Cloud SQL while app runs on 8080
-# Proxy listens on localhost:5432 for database connections
-CMD ["sh", "-c", "cloud-sql-proxy deepdive-engine:asia-east1:deepdive-db --port=5432 & uvicorn src.main:app --host 0.0.0.0 --port ${PORT:-8080} --log-level info"]
+# Run Uvicorn directly - minimal, no overhead
+CMD ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8080", "--log-level", "info"]
