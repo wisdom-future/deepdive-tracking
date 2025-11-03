@@ -11,15 +11,21 @@ RUN apt-get update && apt-get install -y \
 # Copy application code first
 COPY . .
 
-# Install Python dependencies from requirements.txt or setup.py
-# Try requirements.txt first, fallback to setup.py
-RUN if [ -f requirements.txt ]; then \
-        pip install --no-cache-dir -r requirements.txt; \
-    elif [ -f setup.py ]; then \
-        pip install --no-cache-dir -e .; \
-    else \
-        pip install --no-cache-dir flask uvicorn sqlalchemy psycopg2-binary redis requests; \
-    fi
+# Install Python dependencies
+# FastAPI + Uvicorn + Database + Async support
+RUN pip install --no-cache-dir \
+    fastapi==0.104.1 \
+    uvicorn[standard]==0.24.0 \
+    sqlalchemy==2.0.23 \
+    psycopg2-binary==2.9.9 \
+    redis==5.0.1 \
+    requests==2.31.0 \
+    pydantic-settings==2.1.0 \
+    pydantic==2.5.0 \
+    python-multipart==0.0.6 \
+    openai==1.3.5 \
+    celery==5.3.4 \
+    httpx==0.25.2
 
 # Expose port 8080 (Cloud Run standard)
 EXPOSE 8080
