@@ -68,6 +68,8 @@ def create_app() -> FastAPI:
         This endpoint runs alembic upgrade head to create all required tables.
         Safe to call multiple times - alembic tracks applied migrations.
 
+        Uses Cloud SQL Connector in Cloud Run for secure database access.
+
         Returns:
             dict: Migration status.
         """
@@ -75,23 +77,22 @@ def create_app() -> FastAPI:
         logger.info("Database initialization request received")
 
         try:
-            # Import alembic tools
-            from alembic.config import Config
-            from alembic import command
+            # Ensure the database connection is initialized (uses Cloud SQL Connector in Cloud Run)
+            from src.database.connection import _init_db, _engine
+            _init_db()
+            logger.info("Database connection initialized via Cloud SQL Connector")
 
-            project_root = Path(__file__).parent.parent
-            alembic_cfg = Config(str(project_root / "alembic.ini"))
+            # Use SQLAlchemy to create tables directly instead of Alembic
+            # This works with Cloud SQL Connector since we already have an initialized engine
+            from src.models import Base
 
-            # Get database URL from settings
-            settings = get_settings()
-            alembic_cfg.set_main_option("sqlalchemy.url", settings.database_url)
+            logger.info("Creating database tables using SQLAlchemy...")
 
-            logger.info(f"Running migrations with database: {settings.database_url[:50]}...")
+            # Create all tables defined in the ORM models
+            Base.metadata.create_all(bind=_engine)
 
-            # Run migrations
-            command.upgrade(alembic_cfg, "head")
+            logger.info("Database tables created successfully")
 
-            logger.info("Database initialization completed successfully")
             return {
                 "status": "success",
                 "message": "Database tables initialized successfully",
