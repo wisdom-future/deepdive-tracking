@@ -4,11 +4,11 @@
 
 你现在可以直接通过API查看数据库中的数据。无需复杂的数据库工具！
 
-### 方法1️⃣：在浏览器中直接查看（推荐）
+### 方法1️⃣：在浏览器中直接查看（需要认证）
+
+如果看到 403 Forbidden 错误，请使用方法2（命令行）。
 
 **查看已处理的新闻（带评分和摘要）：**
-
-复制以下链接到浏览器：
 ```
 https://deepdive-tracking-orp2dcdqua-de.a.run.app/data/news?table=processed&limit=50&offset=0
 ```
@@ -18,7 +18,7 @@ https://deepdive-tracking-orp2dcdqua-de.a.run.app/data/news?table=processed&limi
 https://deepdive-tracking-orp2dcdqua-de.a.run.app/data/news?table=raw&limit=50&offset=0
 ```
 
-✅ 这些链接会直接显示JSON格式的数据
+⚠️ 如果浏览器显示 403 Forbidden，请改用方法2命令行查询
 
 ---
 
@@ -143,8 +143,17 @@ API响应中包含的统计信息：
 
 ## 故障排除
 
-### Q: 得到 401/403 错误？
-A: 需要认证。使用方法2（命令行）获取授权令牌。
+### Q: 浏览器中看到 403 Forbidden 错误？
+A: 这是正常的，/data/news 端点需要认证。请使用方法2（命令行）查询：
+
+```bash
+SERVICE_URL="https://deepdive-tracking-orp2dcdqua-de.a.run.app"
+ID_TOKEN=$(gcloud auth print-identity-token --audiences="$SERVICE_URL" 2>/dev/null)
+curl -H "Authorization: Bearer $ID_TOKEN" "$SERVICE_URL/data/news?table=processed&limit=50"
+```
+
+### Q: 得到 401 错误？
+A: 认证令牌过期。重新运行 `gcloud auth print-identity-token` 获取新令牌。
 
 ### Q: 得到 404 错误？
 A: 端点名称错误。应该是 `/data/news` 而不是其他名称。
