@@ -307,6 +307,77 @@ def create_app() -> FastAPI:
                 "timestamp": datetime.now().isoformat()
             }
 
+    @app.get("/data/news")
+    async def get_news_data(limit: int = 100, offset: int = 0, table: str = "processed") -> dict:
+        """Get news data from database.
+
+        Args:
+            limit: Number of records to return (max 100)
+            offset: Record offset for pagination
+            table: Which table to query ("raw", "processed")
+
+        Returns:
+            dict: News data with pagination info.
+        """
+        logger = logging.getLogger(__name__)
+        logger.info(f"News data request: table={table}, limit={limit}, offset={offset}")
+
+        try:
+            from src.database.connection import get_session
+            from src.models import RawNews, ProcessedNews
+
+            session = get_session()
+            limit = min(limit, 100)  # Max 100 records
+
+            if table == "raw":
+                total = session.query(RawNews).count()
+                records = session.query(RawNews).offset(offset).limit(limit).all()
+                data = [{
+                    "id": str(r.id),
+                    "title": r.title,
+                    "url": r.url,
+                    "source_name": r.source_name,
+                    "author": r.author,
+                    "published_at": r.published_at.isoformat() if r.published_at else None,
+                    "status": r.status,
+                    "is_duplicate": r.is_duplicate
+                } for r in records]
+            else:  # processed
+                total = session.query(ProcessedNews).count()
+                records = session.query(ProcessedNews).offset(offset).limit(limit).all()
+                data = [{
+                    "id": str(p.id),
+                    "raw_news_id": str(p.raw_news_id),
+                    "title": p.raw_news.title if p.raw_news else "Unknown",
+                    "score": p.score,
+                    "category": p.category,
+                    "summary_zh": p.summary_pro or p.summary_sci,
+                    "summary_en": p.summary_pro_en or p.summary_sci_en,
+                    "confidence": p.confidence,
+                    "created_at": p.created_at.isoformat() if p.created_at else None
+                } for p in records]
+
+            session.close()
+
+            return {
+                "status": "success",
+                "table": table,
+                "total_records": total,
+                "returned_records": len(data),
+                "limit": limit,
+                "offset": offset,
+                "data": data,
+                "timestamp": datetime.now().isoformat()
+            }
+
+        except Exception as e:
+            logger.error(f"News data query failed: {e}", exc_info=True)
+            return {
+                "status": "error",
+                "message": str(e),
+                "timestamp": datetime.now().isoformat()
+            }
+
     @app.post("/seed-test-data")
     async def seed_test_data() -> dict:
         """Seed the database with test processed news data for email/publishing testing.
@@ -436,15 +507,15 @@ def create_app() -> FastAPI:
                 "timestamp": datetime.now().isoformat()
             }
 
-    @app.post("/test-email")
-    async def test_email() -> dict:
-        """Test email sending functionality.
+    @app.post("/publish/email")
+    async def publish_email() -> dict:
+        """Publish news via email channel.
 
         Returns:
-            dict: Email test status.
+            dict: Email publishing status.
         """
         logger = logging.getLogger(__name__)
-        logger.info("Email test request received")
+        logger.info("Email publishing request received")
 
         try:
             # Run the email sending script
@@ -472,22 +543,22 @@ def create_app() -> FastAPI:
             }
 
         except Exception as e:
-            logger.error(f"Email test failed: {e}", exc_info=True)
+            logger.error(f"Email publishing failed: {e}", exc_info=True)
             return {
                 "status": "error",
                 "message": str(e),
                 "timestamp": datetime.now().isoformat()
             }
 
-    @app.post("/test-github-publisher")
-    async def test_github_publisher() -> dict:
-        """Test GitHub publisher functionality.
+    @app.post("/publish/github")
+    async def publish_github() -> dict:
+        """Publish news via GitHub channel.
 
         Returns:
-            dict: GitHub publisher test status.
+            dict: GitHub publishing status.
         """
         logger = logging.getLogger(__name__)
-        logger.info("GitHub publisher test request received")
+        logger.info("GitHub publishing request received")
 
         try:
             # Run the GitHub publisher script
@@ -515,7 +586,7 @@ def create_app() -> FastAPI:
             }
 
         except Exception as e:
-            logger.error(f"GitHub publisher test failed: {e}", exc_info=True)
+            logger.error(f"GitHub publishing failed: {e}", exc_info=True)
             return {
                 "status": "error",
                 "message": str(e),
