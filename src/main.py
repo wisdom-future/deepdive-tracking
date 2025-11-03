@@ -357,6 +357,49 @@ def create_app() -> FastAPI:
                 "timestamp": datetime.now().isoformat()
             }
 
+    @app.post("/test-github-publisher")
+    async def test_github_publisher() -> dict:
+        """Test GitHub publisher functionality.
+
+        Returns:
+            dict: GitHub publisher test status.
+        """
+        logger = logging.getLogger(__name__)
+        logger.info("GitHub publisher test request received")
+
+        try:
+            # Run the GitHub publisher script
+            project_root = Path(__file__).parent.parent
+            github_script = project_root / "scripts" / "publish" / "github-publisher.py"
+
+            logger.info(f"Executing GitHub publisher script: {github_script}")
+
+            result = subprocess.run(
+                ["python", str(github_script)],
+                capture_output=True,
+                text=True,
+                timeout=60,
+                cwd=str(project_root)
+            )
+
+            logger.info(f"GitHub publisher script exit code: {result.returncode}")
+
+            return {
+                "status": "success" if result.returncode == 0 else "failed",
+                "exit_code": result.returncode,
+                "stdout": result.stdout,
+                "stderr": result.stderr,
+                "timestamp": datetime.now().isoformat()
+            }
+
+        except Exception as e:
+            logger.error(f"GitHub publisher test failed: {e}", exc_info=True)
+            return {
+                "status": "error",
+                "message": str(e),
+                "timestamp": datetime.now().isoformat()
+            }
+
     # Include API routers
     app.include_router(news.router, prefix="/api/v1")
     app.include_router(processed_news.router, prefix="/api/v1")
