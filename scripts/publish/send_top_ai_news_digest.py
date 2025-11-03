@@ -56,21 +56,37 @@ def is_ai_related(news: ProcessedNews) -> bool:
 
 
 def generate_digest_html(news_items: list) -> str:
-    """Generate HTML for the digest email with card layout"""
+    """Generate HTML for the digest email with card layout - bilingual"""
     cards_html = ""
     for idx, news in enumerate(news_items, 1):
         if not news.raw_news:
             continue
 
         title = news.raw_news.title or "Untitled"
-        summary = news.summary_pro or news.summary_sci or news.raw_news.content or "No summary"
+
+        # Get Chinese summary (primary)
+        summary_zh = news.summary_pro or news.summary_sci or news.raw_news.content or "No summary"
+
+        # Get English summary (secondary)
+        summary_en = news.summary_pro_en or news.summary_sci_en
+
+        # Validate English summary
+        if not summary_en or len(summary_en.strip()) < 20:
+            summary_en = summary_zh  # Fallback to Chinese if English is invalid
+
         url = news.raw_news.url or "#"
         score = news.score or 0
         source = news.raw_news.source_name or news.raw_news.author or "Unknown"
 
-        # Truncate summary to 150 chars
-        if len(summary) > 150:
-            summary = summary[:147] + "..."
+        # For card display, use Chinese primary with English in parentheses
+        summary = summary_zh
+        if summary_en and summary_en != summary_zh:
+            # Only add English if it's different from Chinese
+            summary = f"{summary_zh}\n\n(EN: {summary_en})"
+
+        # Truncate summary to 200 chars
+        if len(summary) > 200:
+            summary = summary[:197] + "..."
 
         score_color = "green" if score >= 80 else "orange" if score >= 60 else "gray"
         score_icon = "⭐" if score >= 80 else "✨" if score >= 60 else "📰"
@@ -309,6 +325,7 @@ async def main():
             title="TOP AI News Digest - " + datetime.now().strftime("%Y-%m-%d"),
             content=digest_html,
             summary=f"Daily digest of top {len(top_ai_news)} AI news articles",
+            summary_en=f"Daily digest of top {len(top_ai_news)} AI news articles with bilingual summaries",
             author="DeepDive Tracking",
             source_url="https://deepdive-tracking.github.io",
             score=90.0,

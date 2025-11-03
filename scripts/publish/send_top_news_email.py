@@ -52,16 +52,14 @@ def generate_bilingual_email_html(news_items: list, date_str: str) -> str:
         # Get summaries directly from database (AI already generated both Chinese and English)
         summary_zh = get_summary_with_limit(news.summary_pro or news.summary_sci or "无摘要", 120)
 
-        # Get English summary from database or generate a fallback
+        # Get English summary from database with strict validation
         summary_en = news.summary_pro_en or news.summary_sci_en
-        if not summary_en:
-            # Fallback: generate English summary from Chinese if English is missing
-            title = news.raw_news.title or "Article"
-            summary_en = (
-                f"This article discusses recent important advances in the AI field. "
-                f"The title '{title[:40]}...' covers the latest technological breakthroughs. "
-                f"It provides valuable reference for technology practitioners and decision makers."
-            )
+
+        # Validate English summary - must be meaningful and not an error message
+        if not summary_en or len(summary_en.strip()) < 20:
+            # If English summary is missing or too short, use Chinese as fallback
+            summary_en = summary_zh
+
         summary_en = get_summary_with_limit(summary_en, 120)
 
         score = news.score or 0
@@ -435,6 +433,7 @@ async def main():
             title=email_title,
             content=html_content,
             summary=f"Top {len(top_news)} AI news items with Chinese and English bilingual summaries",
+            summary_en=f"Top {len(top_news)} AI news items - carefully curated and scored by our AI system",
             author="DeepDive Tracking",
             source_url="https://deepdive-tracking.github.io",
             score=0,

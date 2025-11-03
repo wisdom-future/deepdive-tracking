@@ -373,6 +373,11 @@ class ScoringService:
 
             summary = response_json.get(summary_key, response_text_clean)
 
+            # Validate summary content
+            if not summary or len(str(summary).strip()) < 10:
+                self.logger.warning(f"Summary for {version} is too short, using fallback")
+                summary = response_text_clean if response_text_clean else "Summary generation failed"
+
             # Calculate cost
             input_tokens = response.usage.prompt_tokens
             output_tokens = response.usage.completion_tokens
@@ -381,8 +386,32 @@ class ScoringService:
             return summary, cost
 
         except (json.JSONDecodeError, KeyError) as e:
-            self.logger.warning(f"Using raw response as summary for {version}: {str(e)}")
-            return response_text, 0.005  # Estimated cost
+            self.logger.warning(f"JSON parse error for {version}: {str(e)}")
+            self.logger.warning(f"Raw response: {response_text[:200] if 'response_text' in locals() else 'N/A'}...")
+
+            # Try to extract meaningful content from raw response
+            if 'response_text' in locals():
+                # If response looks like JSON but failed parsing, return it as-is
+                if response_text.startswith('{') or response_text.startswith('['):
+                    self.logger.warning(f"Response looks like JSON but parsing failed")
+                    return response_text, 0.005
+
+                # If response is plain text, use it as summary
+                if len(response_text.strip()) > 10:
+                    self.logger.warning(f"Using plain text response as fallback summary")
+                    return response_text, 0.005
+
+            # Last resort: generate a fallback summary
+            self.logger.error(f"Could not extract summary from response for {version}")
+            return f"Summary generation failed for {version}", 0.005
+
+        except (APIError, APIConnectionError, RateLimitError) as e:
+            self.logger.error(f"API error while generating summary for {version}: {str(e)}")
+            return f"API error: {str(e)[:100]}", 0.005
+
+        except Exception as e:
+            self.logger.error(f"Unexpected error generating summary for {version}: {str(e)}")
+            return f"Error: {str(e)[:100]}", 0.005
 
     @staticmethod
     def _calculate_quality_score(scoring: ScoringResponse) -> float:

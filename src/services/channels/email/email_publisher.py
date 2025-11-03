@@ -108,7 +108,8 @@ class EmailPublisher:
         score: float,
         category: str,
         email_list: Optional[List[str]] = None,
-        article_id: Optional[int] = None
+        article_id: Optional[int] = None,
+        summary_en: Optional[str] = None
     ) -> Dict[str, Any]:
         """
         发送单篇文章到邮件列表
@@ -116,13 +117,14 @@ class EmailPublisher:
         Args:
             title: 文章标题
             content: 文章内容（HTML格式）
-            summary: 摘要
+            summary: 摘要（中文）
             author: 作者
             source_url: 源URL
             score: 评分 (0-100)
             category: 分类
             email_list: 邮件列表（如为None则使用默认列表）
             article_id: 文章ID
+            summary_en: 英文摘要
 
         Returns:
             {
@@ -147,6 +149,7 @@ class EmailPublisher:
                 title=title,
                 content=content,
                 summary=summary,
+                summary_en=summary_en,
                 author=author,
                 source_url=source_url,
                 score=score,
@@ -275,7 +278,8 @@ class EmailPublisher:
         source_url: str,
         score: float,
         category: str,
-        publish_date: datetime
+        publish_date: datetime,
+        summary_en: Optional[str] = None
     ) -> str:
         """生成邮件HTML - 业界最佳实践设计"""
         # 计算评分等级和颜色
@@ -543,7 +547,7 @@ class EmailPublisher:
                     {html.escape(summary)}
                 </div>
                 <div class="summary-en">
-                    (摘要展示，已提炼核心信息)
+                    {html.escape(summary_en) if summary_en else '(No English summary available)'}
                 </div>
             </div>
 
