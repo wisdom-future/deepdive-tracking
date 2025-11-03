@@ -26,7 +26,7 @@ RUN pip install --no-cache-dir \
     openai==1.3.5 \
     celery==5.3.4 \
     httpx==0.25.2 \
-    google-cloud-secret-manager==2.16.5
+    google-cloud-secret-manager==2.25.0
 
 # Expose port 8080 (Cloud Run standard)
 EXPOSE 8080
