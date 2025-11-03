@@ -50,3 +50,32 @@ class _SessionLocalProxy:
 
 # Export SessionLocal as a lazy-loaded proxy
 SessionLocal = _SessionLocalProxy()
+
+
+# Lazy-loaded engine getter (for backward compatibility)
+def _get_engine_proxy():
+    """Get the database engine (lazy initialization)."""
+    if _engine is None:
+        _init_db()
+    return _engine
+
+
+# Create a simple proxy for engine that initializes on access
+class _EngineProxy:
+    """Proxy for lazy-loading the database engine."""
+
+    def __getattr__(self, name):
+        if _engine is None:
+            _init_db()
+        if _engine is None:
+            raise RuntimeError("Failed to initialize database engine")
+        return getattr(_engine, name)
+
+    def __call__(self, *args, **kwargs):
+        if _engine is None:
+            _init_db()
+        return _engine(*args, **kwargs)
+
+
+# Export engine as a lazy-loaded proxy for backward compatibility
+engine = _EngineProxy()
