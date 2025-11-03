@@ -204,11 +204,13 @@ DeepDive Tracking 产品架构
 │   │   ├── arXiv/GitHub API（5个）
 │   │   └── 去重与清洗
 │   │
-│   ├── AI处理引擎
-│   │   ├── OpenAI（主）：评分、分类、科普摘要
-│   │   ├── Claude（次/备）：深度分析、专业摘要
-│   │   ├── 智能路由：任务类型自动选择模型
-│   │   └── Prompt管理：版本控制、A/B测试
+│   ├── AI处理引擎（多供应商智能路由）
+│   │   ├── OpenAI（主）：通用内容评分、分类、科普摘要
+│   │   ├── Grok/xAI（X专用）：Twitter/X内容评分、实时趋势识别
+│   │   ├── Claude（深度分析）：复杂推理、专业摘要、备选方案
+│   │   ├── 智能路由：基于源类型、内容长度、任务类型自动选择最优模型
+│   │   ├── 成本优化：多供应商灵活选择，节省15-20% AI成本
+│   │   └── Prompt管理：版本控制、A/B测试、多语言支持
 │   │
 │   ├── 内容编辑系统
 │   │   ├── 审核队列（score>=70进入）
@@ -720,7 +722,10 @@ WAU（北极星指标）
 - 缓存：Redis 7
 - 任务队列：Celery + RabbitMQ
 - 爬虫：Scrapy
-- AI SDK：OpenAI + Anthropic官方SDK
+- AI SDK：OpenAI + Anthropic + xAI官方SDK（多供应商策略）
+  * OpenAI（通用内容评分）
+  * Grok/xAI（X/Twitter专用，原生理解X平台语境）
+  * Claude（深度分析和备选）
 
 前端（Admin）：
 - Streamlit（快速原型）

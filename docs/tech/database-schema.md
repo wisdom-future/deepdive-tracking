@@ -307,11 +307,23 @@ CREATE TABLE processed_news (
     sentiment VARCHAR(50),               -- positive, negative, neutral
     word_count INT,
 
-    -- AI处理信息
-    ai_models_used TEXT[],               -- [gpt-4o, claude-3.5-sonnet]
+    -- AI处理信息（多供应商支持）
+    ai_models_used TEXT[],               -- [gpt-4o, grok-2, claude-3.5-sonnet]
+                                         -- 支持的提供商：
+                                         --   OpenAI: gpt-4o, gpt-4o-mini, gpt-3.5-turbo
+                                         --   Grok/xAI: grok-2, grok-3 (X/Twitter内容专用)
+                                         --   Claude: claude-3.5-sonnet, claude-3-opus
+    ai_providers_used TEXT[],            -- ['openai', 'grok', 'claude']
+                                         -- 记录使用的供应商列表
+    ai_provider_selection_reason JSONB,  -- {scoring: 'grok', reason: 'twitter_source_optimization'}
+                                         -- 记录每个任务的提供商选择原因
     processing_time_ms INT,              -- 处理耗时
     cost FLOAT,                          -- 成本，精确到0.001元
-    cost_breakdown JSONB,                -- {scoring: 0.05, summary: 0.15, ...}
+    cost_breakdown JSONB,                -- {
+                                         --   openai_scoring: 0.05,
+                                         --   grok_summary: 0.15,
+                                         --   claude_fallback: 0.0
+                                         -- }
 
     -- 版本控制
     version INT DEFAULT 1,
@@ -607,19 +619,34 @@ CREATE TABLE cost_logs (
     processed_news_id INT REFERENCES processed_news(id),
     publishing_schedule_id INT REFERENCES publishing_schedules(id),
 
-    -- 成本信息
-    service VARCHAR(100) NOT NULL,      -- openai, claude, wechat, xiaohongshu, etc
+    -- 成本信息（多供应商支持）
+    service VARCHAR(100) NOT NULL,      -- openai, grok, claude, wechat, xiaohongshu, etc
+    provider VARCHAR(50),                -- 提供商标识：openai, grok, claude, wechat, xiaohongshu
+                                         -- 多供应商策略中用于追踪成本来源
     operation VARCHAR(100) NOT NULL,    -- scoring, summarization, publishing
+                                         -- 多供应商：
+                                         --   openai: scoring(RSS/Web), summarization
+                                         --   grok: twitter_scoring, twitter_keywords
+                                         --   claude: deep_analysis, fallback_scoring
 
     -- 使用量和成本
     usage_units INT,                     -- tokens, API calls, messages
     unit_price FLOAT,                    -- 单价
     total_cost FLOAT,                    -- 总成本
+    cost_category VARCHAR(50),           -- 成本分类：ai_processing, publishing, storage
+                                         -- 用于多供应商成本统计和优化
 
     -- 详细信息
     request_id VARCHAR(255),             -- API请求ID
-    model VARCHAR(100),                  -- 使用的模型
-    metadata JSONB,                      -- 额外信息
+    model VARCHAR(100),                  -- 使用的模型（跟踪具体使用的AI模型）
+                                         -- 示例：gpt-4o-mini, grok-2, claude-3.5-sonnet
+    metadata JSONB,                      -- 额外信息，包含多供应商相关元数据
+                                         -- 示例: {
+                                         --   source_type: 'twitter',
+                                         --   provider_selection_reason: 'twitter_native_optimization',
+                                         --   fallback_from: 'openai',
+                                         --   processing_time_ms: 1234
+                                         -- }
 
     -- 时间戳
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
