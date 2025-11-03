@@ -105,12 +105,14 @@ def create_app() -> FastAPI:
             # Check if columns already exist before adding them
             logger.info("Checking for English summary columns...")
 
-            with _engine.connect() as connection:
+            from sqlalchemy import text
+
+            with _engine.begin() as connection:
                 # For PostgreSQL, check information_schema
                 try:
                     result = connection.execute(
-                        "SELECT column_name FROM information_schema.columns "
-                        "WHERE table_name='processed_news' AND column_name='summary_pro_en'"
+                        text("SELECT column_name FROM information_schema.columns "
+                             "WHERE table_name='processed_news' AND column_name='summary_pro_en'")
                     )
                     has_summary_pro_en = result.fetchone() is not None
                 except Exception as check_e:
@@ -122,19 +124,17 @@ def create_app() -> FastAPI:
                     logger.info("Adding summary_pro_en column...")
                     try:
                         connection.execute(
-                            "ALTER TABLE processed_news ADD COLUMN summary_pro_en TEXT NULL"
+                            text("ALTER TABLE processed_news ADD COLUMN summary_pro_en TEXT NULL")
                         )
-                        connection.commit()
                         logger.info("summary_pro_en column added successfully")
                     except Exception as add_e:
                         logger.warning(f"Could not add summary_pro_en: {add_e}")
-                        connection.rollback()
 
                 # Add summary_sci_en column if it doesn't exist
                 try:
                     result = connection.execute(
-                        "SELECT column_name FROM information_schema.columns "
-                        "WHERE table_name='processed_news' AND column_name='summary_sci_en'"
+                        text("SELECT column_name FROM information_schema.columns "
+                             "WHERE table_name='processed_news' AND column_name='summary_sci_en'")
                     )
                     has_summary_sci_en = result.fetchone() is not None
                 except Exception as check_e:
@@ -145,13 +145,11 @@ def create_app() -> FastAPI:
                     logger.info("Adding summary_sci_en column...")
                     try:
                         connection.execute(
-                            "ALTER TABLE processed_news ADD COLUMN summary_sci_en TEXT NULL"
+                            text("ALTER TABLE processed_news ADD COLUMN summary_sci_en TEXT NULL")
                         )
-                        connection.commit()
                         logger.info("summary_sci_en column added successfully")
                     except Exception as add_e:
                         logger.warning(f"Could not add summary_sci_en: {add_e}")
-                        connection.rollback()
 
             logger.info("Database initialization completed successfully")
 
