@@ -67,28 +67,30 @@ def run_migrations_online() -> None:
     and associate a connection with the context.
 
     """
-    from sqlalchemy import create_engine
+    # When called from the FastAPI /init-db endpoint, a connection
+    # will be provided via config.attributes['connection']
+    # Otherwise, use standard alembic.ini configuration
+    connectable = config.attributes.get("connection", None)
 
-    # Check if database URL is provided via environment variable (for Cloud Run)
-    # Otherwise fall back to alembic.ini configuration
-    db_url = os.environ.get("SQLALCHEMY_DATABASE_URL")
-
-    if db_url:
-        # Use the environment variable URL (for Cloud Run with Cloud SQL Connector)
-        connectable = create_engine(db_url, poolclass=pool.NullPool)
-    else:
-        # Fall back to alembic.ini configuration
+    if connectable is None:
+        # Fall back to creating an engine from alembic.ini
+        from sqlalchemy import create_engine
         connectable = engine_from_config(
             config.get_section(config.config_ini_section, {}),
             prefix="sqlalchemy.",
             poolclass=pool.NullPool,
         )
-
-    with connectable.connect() as connection:
+        with connectable.connect() as connection:
+            context.configure(
+                connection=connection, target_metadata=target_metadata
+            )
+            with context.begin_transaction():
+                context.run_migrations()
+    else:
+        # Use the connection passed from the /init-db endpoint
         context.configure(
-            connection=connection, target_metadata=target_metadata
+            connection=connectable, target_metadata=target_metadata
         )
-
         with context.begin_transaction():
             context.run_migrations()
 
