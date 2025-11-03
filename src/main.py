@@ -314,8 +314,10 @@ def create_app() -> FastAPI:
         This creates processed news records from collected raw news so the email
         and publishing functions can be tested without waiting for AI scoring.
 
+        Also updates existing records to fill in missing English summaries.
+
         Returns:
-            dict: Number of processed news records created.
+            dict: Number of processed news records created or updated.
         """
         logger = logging.getLogger(__name__)
         logger.info("Test data seeding request received")
@@ -326,76 +328,103 @@ def create_app() -> FastAPI:
 
             session = get_session()
 
-            # Get raw news articles that don't have processed records yet
+            # First, update existing records that have NULL English summaries
+            logger.info("Updating existing records with NULL English summaries...")
+            existing_null = session.query(ProcessedNews).filter(
+                ProcessedNews.summary_pro_en.is_(None) | ProcessedNews.summary_sci_en.is_(None)
+            ).all()
+
+            updated_count = 0
+            for processed in existing_null:
+                title = processed.raw_news.title if processed.raw_news else "AI News Article"
+
+                # Update with realistic English summaries
+                if processed.summary_pro_en is None:
+                    processed.summary_pro_en = (
+                        f"This article discusses recent important advances in the AI field. "
+                        f"The title mentions '{title[:30]}...', covering the latest technological breakthroughs and industry trends. "
+                        f"This news reflects the continuous progress of AI technology and provides valuable reference for technology practitioners."
+                    )
+
+                if processed.summary_sci_en is None:
+                    processed.summary_sci_en = (
+                        f"This is a news report related to AI. "
+                        f"The article titled '{title[:30]}...' introduces readers to the latest developments in the AI field. "
+                        f"In an accessible way, it explains the practical significance and application prospects of this development."
+                    )
+
+                session.merge(processed)
+                updated_count += 1
+
+            if updated_count > 0:
+                session.commit()
+                logger.info(f"Updated {updated_count} existing records with English summaries")
+
+            # Then, get raw news articles that don't have processed records yet
             unprocessed = session.query(RawNews).filter(
                 ~RawNews.id.in_(
                     session.query(ProcessedNews.raw_news_id)
                 )
             ).limit(5).all()
 
-            if not unprocessed:
-                return {
-                    "status": "success",
-                    "created_count": 0,
-                    "message": "No unprocessed news found to seed",
-                    "timestamp": datetime.now().isoformat()
-                }
-
-            # Create processed news records with realistic test data
             created_count = 0
-            for raw_news in unprocessed:
-                # Generate realistic test summaries
-                title = raw_news.title if raw_news.title else "AI News Article"
+            if unprocessed:
+                for raw_news in unprocessed:
+                    # Generate realistic test summaries
+                    title = raw_news.title if raw_news.title else "AI News Article"
 
-                # Professional summary (Chinese)
-                summary_pro = (
-                    f"这篇文章讨论了近期AI领域的重要进展。"
-                    f"标题为《{title[:30]}...》，内容涉及最新的技术突破和行业动向。"
-                    f"该新闻反映了AI技术在持续进步，为相关从业者和技术决策者提供了有价值的参考信息。"
-                )
+                    # Professional summary (Chinese)
+                    summary_pro = (
+                        f"这篇文章讨论了近期AI领域的重要进展。"
+                        f"标题为《{title[:30]}...》，内容涉及最新的技术突破和行业动向。"
+                        f"该新闻反映了AI技术在持续进步，为相关从业者和技术决策者提供了有价值的参考信息。"
+                    )
 
-                # Scientific summary (Chinese)
-                summary_sci = (
-                    f"这是关于AI相关的新闻报道。"
-                    f"文章标题《{title[:30]}...》向读者介绍了AI领域的最新发展。"
-                    f"通过通俗易懂的方式，文章阐述了这一进展的现实意义和应用前景。"
-                )
+                    # Scientific summary (Chinese)
+                    summary_sci = (
+                        f"这是关于AI相关的新闻报道。"
+                        f"文章标题《{title[:30]}...》向读者介绍了AI领域的最新发展。"
+                        f"通过通俗易懂的方式，文章阐述了这一进展的现实意义和应用前景。"
+                    )
 
-                # Professional summary (English)
-                summary_pro_en = (
-                    f"This article discusses recent important advances in the AI field. "
-                    f"The title mentions '{title[:30]}...', covering the latest technological breakthroughs and industry trends. "
-                    f"This news reflects the continuous progress of AI technology and provides valuable reference for technology practitioners."
-                )
+                    # Professional summary (English)
+                    summary_pro_en = (
+                        f"This article discusses recent important advances in the AI field. "
+                        f"The title mentions '{title[:30]}...', covering the latest technological breakthroughs and industry trends. "
+                        f"This news reflects the continuous progress of AI technology and provides valuable reference for technology practitioners."
+                    )
 
-                # Scientific summary (English)
-                summary_sci_en = (
-                    f"This is a news report related to AI. "
-                    f"The article titled '{title[:30]}...' introduces readers to the latest developments in the AI field. "
-                    f"In an accessible way, it explains the practical significance and application prospects of this development."
-                )
+                    # Scientific summary (English)
+                    summary_sci_en = (
+                        f"This is a news report related to AI. "
+                        f"The article titled '{title[:30]}...' introduces readers to the latest developments in the AI field. "
+                        f"In an accessible way, it explains the practical significance and application prospects of this development."
+                    )
 
-                processed = ProcessedNews(
-                    raw_news_id=raw_news.id,
-                    score=75,  # Test score
-                    category="tech_breakthrough",
-                    summary_pro=summary_pro,
-                    summary_sci=summary_sci,
-                    summary_pro_en=summary_pro_en,
-                    summary_sci_en=summary_sci_en,
-                    keywords=["AI", "technology", "advancement"],
-                    confidence=0.85
-                )
-                session.add(processed)
-                created_count += 1
+                    processed = ProcessedNews(
+                        raw_news_id=raw_news.id,
+                        score=75,  # Test score
+                        category="tech_breakthrough",
+                        summary_pro=summary_pro,
+                        summary_sci=summary_sci,
+                        summary_pro_en=summary_pro_en,
+                        summary_sci_en=summary_sci_en,
+                        keywords=["AI", "technology", "advancement"],
+                        confidence=0.85
+                    )
+                    session.add(processed)
+                    created_count += 1
 
-            session.commit()
+                session.commit()
+                logger.info(f"Created {created_count} new processed news records")
+
             session.close()
 
             return {
                 "status": "success",
                 "created_count": created_count,
-                "message": f"Created {created_count} test processed news records",
+                "updated_count": updated_count,
+                "message": f"Created {created_count} new records and updated {updated_count} existing records with English summaries",
                 "timestamp": datetime.now().isoformat()
             }
 
