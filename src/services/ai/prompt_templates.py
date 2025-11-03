@@ -85,9 +85,10 @@ def get_summary_prompt(
         key_points: Key points from scoring
 
     Returns:
-        Dictionary with professional and scientific summaries
+        Dictionary with professional, scientific, professional_en, and scientific_en summaries
     """
-    base_prompt = f"""基于以下新闻信息，请生成两个版本的摘要：
+    # 中文基础提示词
+    base_prompt_zh = f"""基于以下新闻信息，请生成摘要：
 
 【新闻信息】
 标题：{title}
@@ -101,7 +102,7 @@ def get_summary_prompt(
 - 语言准确、表述清晰
 - 保留新闻的核心信息和重要细节"""
 
-    professional_prompt = f"""{base_prompt}
+    professional_prompt = f"""{base_prompt_zh}
 
 【专业版摘要要求】
 - 面向技术决策者和AI从业者
@@ -112,7 +113,7 @@ def get_summary_prompt(
 请返回JSON格式：
 {{"summary_pro": "<专业版摘要>"}}"""
 
-    scientific_prompt = f"""{base_prompt}
+    scientific_prompt = f"""{base_prompt_zh}
 
 【科普版摘要要求】
 - 面向非专业人士（PM、投资人、爱好者）
@@ -123,9 +124,48 @@ def get_summary_prompt(
 请返回JSON格式：
 {{"summary_sci": "<科普版摘要>"}}"""
 
+    # English base prompt
+    base_prompt_en = f"""Based on the following news information, please generate a summary:
+
+[News Information]
+Title: {title}
+Content: {content}
+Score: {score}/100
+Category: {category}
+Key Points: {', '.join(key_points)}
+
+Requirements:
+- Summary length: 150-200 words
+- Accurate language and clear expression
+- Preserve core information and important details from the article"""
+
+    professional_prompt_en = f"""{base_prompt_en}
+
+[Professional Summary Requirements]
+- Targeted at tech decision-makers and AI practitioners
+- Preserve technical terminology and professional details
+- Emphasize significance for technology development
+- Include specific data and metrics
+
+Please return in JSON format:
+{{"summary_pro_en": "<professional summary>"}}"""
+
+    scientific_prompt_en = f"""{base_prompt_en}
+
+[Popular Science Summary Requirements]
+- Targeted at non-technical audience (PMs, investors, enthusiasts)
+- Explain technical concepts in accessible language
+- Use analogies and metaphors for understanding
+- Emphasize practical significance and application value
+
+Please return in JSON format:
+{{"summary_sci_en": "<popular science summary>"}}"""
+
     return {
         "professional": professional_prompt,
-        "scientific": scientific_prompt
+        "scientific": scientific_prompt,
+        "professional_en": professional_prompt_en,
+        "scientific_en": scientific_prompt_en,
     }
 
 

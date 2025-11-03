@@ -341,16 +341,49 @@ def create_app() -> FastAPI:
                     "timestamp": datetime.now().isoformat()
                 }
 
-            # Create processed news records with test data
+            # Create processed news records with realistic test data
             created_count = 0
             for raw_news in unprocessed:
+                # Generate realistic test summaries
+                title = raw_news.title if raw_news.title else "AI News Article"
+
+                # Professional summary (Chinese)
+                summary_pro = (
+                    f"这篇文章讨论了近期AI领域的重要进展。"
+                    f"标题为《{title[:30]}...》，内容涉及最新的技术突破和行业动向。"
+                    f"该新闻反映了AI技术在持续进步，为相关从业者和技术决策者提供了有价值的参考信息。"
+                )
+
+                # Scientific summary (Chinese)
+                summary_sci = (
+                    f"这是关于AI相关的新闻报道。"
+                    f"文章标题《{title[:30]}...》向读者介绍了AI领域的最新发展。"
+                    f"通过通俗易懂的方式，文章阐述了这一进展的现实意义和应用前景。"
+                )
+
+                # Professional summary (English)
+                summary_pro_en = (
+                    f"This article discusses recent important advances in the AI field. "
+                    f"The title mentions '{title[:30]}...', covering the latest technological breakthroughs and industry trends. "
+                    f"This news reflects the continuous progress of AI technology and provides valuable reference for technology practitioners."
+                )
+
+                # Scientific summary (English)
+                summary_sci_en = (
+                    f"This is a news report related to AI. "
+                    f"The article titled '{title[:30]}...' introduces readers to the latest developments in the AI field. "
+                    f"In an accessible way, it explains the practical significance and application prospects of this development."
+                )
+
                 processed = ProcessedNews(
                     raw_news_id=raw_news.id,
                     score=75,  # Test score
                     category="tech_breakthrough",
-                    summary_pro=f"Professional summary of: {raw_news.title[:100] if raw_news.title else 'Article'}",
-                    summary_sci="This is a test processed record created for email testing",
-                    keywords=["AI", "test"],
+                    summary_pro=summary_pro,
+                    summary_sci=summary_sci,
+                    summary_pro_en=summary_pro_en,
+                    summary_sci_en=summary_sci_en,
+                    keywords=["AI", "technology", "advancement"],
                     confidence=0.85
                 )
                 session.add(processed)

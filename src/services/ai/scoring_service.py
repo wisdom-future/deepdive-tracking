@@ -56,6 +56,8 @@ class ScoringService:
             ValueError: If API call fails after retries
             APIError: If OpenAI API returns error
         """
+        import asyncio
+
         start_time = time.time()
         costs = {}
 
@@ -65,19 +67,30 @@ class ScoringService:
             scoring, score_cost = await self._call_scoring_api(raw_news)
             costs["scoring"] = score_cost
 
-            # Step 2: Generate professional summary
-            self.logger.info(f"Generating professional summary for {raw_news.id}")
-            summary_pro, summary_pro_cost = await self._generate_summary(
-                raw_news, scoring, version="professional"
+            # Steps 2-5: Generate bilingual summaries (4 versions) in parallel
+            self.logger.info(
+                f"Generating bilingual summaries for {raw_news.id} "
+                "(professional/scientific × Chinese/English)"
             )
-            costs["summary_pro"] = summary_pro_cost
 
-            # Step 3: Generate scientific summary
-            self.logger.info(f"Generating scientific summary for {raw_news.id}")
-            summary_sci, summary_sci_cost = await self._generate_summary(
-                raw_news, scoring, version="scientific"
+            # Parallelize all 4 summary generations
+            summary_results = await asyncio.gather(
+                self._generate_summary(raw_news, scoring, version="professional"),
+                self._generate_summary(raw_news, scoring, version="scientific"),
+                self._generate_summary(raw_news, scoring, version="professional_en"),
+                self._generate_summary(raw_news, scoring, version="scientific_en"),
+                return_exceptions=False,
             )
+
+            summary_pro, summary_pro_cost = summary_results[0]
+            summary_sci, summary_sci_cost = summary_results[1]
+            summary_pro_en, summary_pro_en_cost = summary_results[2]
+            summary_sci_en, summary_sci_en_cost = summary_results[3]
+
+            costs["summary_pro"] = summary_pro_cost
             costs["summary_sci"] = summary_sci_cost
+            costs["summary_pro_en"] = summary_pro_en_cost
+            costs["summary_sci_en"] = summary_sci_en_cost
 
             # Calculate total cost and quality score
             total_cost = sum(costs.values())
@@ -90,7 +103,10 @@ class ScoringService:
                 raw_news_id=raw_news.id,
                 scoring=scoring,
                 summaries=SummaryResponse(
-                    summary_pro=summary_pro, summary_sci=summary_sci
+                    summary_pro=summary_pro,
+                    summary_sci=summary_sci,
+                    summary_pro_en=summary_pro_en,
+                    summary_sci_en=summary_sci_en,
                 ),
                 metadata=ProcessingMetadata(
                     ai_models_used=[self.model],
@@ -189,6 +205,8 @@ class ScoringService:
                 confidence=scoring_result.scoring.confidence,
                 summary_pro=scoring_result.summaries.summary_pro,
                 summary_sci=scoring_result.summaries.summary_sci,
+                summary_pro_en=scoring_result.summaries.summary_pro_en,
+                summary_sci_en=scoring_result.summaries.summary_sci_en,
                 keywords=scoring_result.scoring.keywords,
                 entities=scoring_result.scoring.entities.model_dump(),
                 tech_terms=self._extract_tech_terms(
@@ -297,7 +315,7 @@ class ScoringService:
         Args:
             raw_news: Raw news article
             scoring: Scoring result
-            version: "professional" or "scientific"
+            version: "professional", "scientific", "professional_en", or "scientific_en"
 
         Returns:
             Tuple of (summary text, API cost)
@@ -312,14 +330,22 @@ class ScoringService:
 
         prompt = prompts[version]
 
+        # Choose system prompt based on language
+        if version.endswith("_en"):
+            system_prompt = (
+                "You are a professional summary writer who can generate "
+                "high-quality summaries for different audiences in English."
+            )
+        else:
+            system_prompt = (
+                "你是一个专业的摘要写手，能够为不同受众生成高质量的摘要。"
+            )
+
         try:
             response = self.client.chat.completions.create(
                 model=self.model,
                 messages=[
-                    {
-                        "role": "system",
-                        "content": "你是一个专业的摘要写手，能够为不同受众生成高质量的摘要。",
-                    },
+                    {"role": "system", "content": system_prompt},
                     {"role": "user", "content": prompt},
                 ],
                 temperature=0.5,
@@ -332,7 +358,19 @@ class ScoringService:
             response_text_clean = strip_markdown_code_blocks(response_text)
 
             response_json = json.loads(response_text_clean)
-            summary_key = f"summary_{version[:3]}"  # summary_pro or summary_sci
+
+            # Build expected key: summary_pro, summary_sci, summary_pro_en, summary_sci_en
+            if version == "professional":
+                summary_key = "summary_pro"
+            elif version == "scientific":
+                summary_key = "summary_sci"
+            elif version == "professional_en":
+                summary_key = "summary_pro_en"
+            elif version == "scientific_en":
+                summary_key = "summary_sci_en"
+            else:
+                summary_key = f"summary_{version[:3]}"
+
             summary = response_json.get(summary_key, response_text_clean)
 
             # Calculate cost
