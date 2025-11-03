@@ -1,9 +1,17 @@
 """Application settings and configuration management."""
 
+import os
 from functools import lru_cache
 from typing import Optional
 
 from pydantic_settings import BaseSettings
+
+# Load secrets from GCP Secret Manager if available
+try:
+    from src.utils.gcp_secrets import load_gcp_secrets_to_env
+    load_gcp_secrets_to_env()
+except Exception as e:
+    print(f"Warning: Could not load GCP secrets: {e}")
 
 
 class Settings(BaseSettings):
@@ -64,12 +72,12 @@ class Settings(BaseSettings):
     github_local_path: Optional[str] = None
 
     # Publishing Channels - Email
-    smtp_host: Optional[str] = None
-    smtp_port: int = 587
-    smtp_user: Optional[str] = None
-    smtp_password: Optional[str] = None
-    smtp_from_email: Optional[str] = None
-    smtp_from_name: str = "DeepDive Tracking"
+    smtp_host: Optional[str] = os.getenv("SMTP_HOST", "smtp.gmail.com")
+    smtp_port: int = int(os.getenv("SMTP_PORT", "587"))
+    smtp_user: Optional[str] = os.getenv("SMTP_USER")
+    smtp_password: Optional[str] = os.getenv("SMTP_PASSWORD")
+    smtp_from_email: Optional[str] = os.getenv("SMTP_FROM_EMAIL") or os.getenv("SMTP_USER")
+    smtp_from_name: str = os.getenv("SMTP_FROM_NAME", "DeepDive Tracking")
     email_list: Optional[list] = None
 
     xiaohongshu_api_url: Optional[str] = None
