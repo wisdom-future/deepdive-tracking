@@ -11,15 +11,15 @@ env_variables:
   LOG_LEVEL: "INFO"
 
   # Database - Cloud SQL
-  DATABASE_URL: "postgresql://deepdive_user:deepdive_password@cloudsql-proxy:5432/deepdive_db"
+  DATABASE_URL: "postgresql://deepdive_user:deepdive_password@35.189.186.161:5432/deepdive_db"
 
   # Redis Cache - Cloud Memorystore
-  REDIS_URL: "redis://deepdive-redis:6379/0"
+  REDIS_URL: "redis://10.240.18.115:6379/0"
   REDIS_CACHE_TTL: "3600"
 
   # Celery - Cloud Tasks
-  CELERY_BROKER_URL: "redis://deepdive-redis:6379/1"
-  CELERY_RESULT_BACKEND: "redis://deepdive-redis:6379/2"
+  CELERY_BROKER_URL: "redis://10.240.18.115:6379/1"
+  CELERY_RESULT_BACKEND: "redis://10.240.18.115:6379/2"
 
   # External APIs - OpenAI
   OPENAI_API_KEY: "${OPENAI_API_KEY}"
@@ -54,7 +54,7 @@ env_variables:
   ENABLE_ANALYTICS: "True"
 
 beta_settings:
-  cloud_sql_instances: "PROJECT_ID:REGION:INSTANCE_NAME"
+  cloud_sql_instances: "deepdive-engine:asia-east1:deepdive-db"
 
 automatic_scaling:
   min_instances: 1
