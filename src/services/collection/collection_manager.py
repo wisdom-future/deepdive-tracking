@@ -12,6 +12,7 @@ from sqlalchemy import func
 from src.models import DataSource, RawNews
 from src.services.collection.base_collector import BaseCollector
 from src.services.collection.rss_collector import RSSCollector
+from src.services.collection.twitter_collector import TwitterCollector
 
 logger = logging.getLogger(__name__)
 
@@ -163,6 +164,8 @@ class CollectionManager:
         """
         if source.type == "rss":
             return RSSCollector(source)
+        elif source.type == "twitter":
+            return TwitterCollector(source)
         elif source.type == "crawler":
             # TODO: Implement crawler collector
             self.logger.warning(f"Crawler collector not yet implemented for {source.name}")
