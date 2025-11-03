@@ -6,23 +6,23 @@ This directory contains all automation scripts for the DeepDive Tracking project
 
 ```
 scripts/
-├── 00-deployment/       # Cloud Run deployment tools
-├── 00-setup/            # Initial setup and configuration scripts
-├── 01-collection/       # News collection and data gathering
-├── 02-evaluation/       # AI scoring and evaluation
-├── 03-review/           # Content review and quality control
-├── 03-verification/     # Post-review verification
-├── 04-publish/          # Publishing and channel management
-├── 05-verification/     # Publishing verification
-├── 06-initialization/   # Database and cache initialization
+├── collection/          # News collection and data gathering
+├── deployment/          # Cloud Run deployment tools
+├── evaluation/          # AI scoring and evaluation
+├── initialization/      # Database and cache initialization
+├── post-verification/   # Publishing verification & post-publish checks
+├── publish/             # Publishing and channel management
 ├── quickstart/          # Quick start automation
+├── review/              # Content review and quality control
+├── setup/               # Initial setup and configuration scripts
 ├── tests/               # Test and validation scripts
-└── README.md            # This file
+├── verification/        # Post-review verification
+└── scripts-structure.md # This file
 ```
 
 ---
 
-## 🚀 Deployment (00-deployment)
+## 🚀 Deployment
 
 **Cloud Run deployment tools**
 
@@ -35,17 +35,17 @@ scripts/
 
 ```bash
 # Dry-run mode
-python scripts/00-deployment/deploy_to_cloud_run.py --dry-run
+python scripts/deployment/deploy_to_cloud_run.py --dry-run
 
 # Actual deployment
-python scripts/00-deployment/deploy_to_cloud_run.py
+python scripts/deployment/deploy_to_cloud_run.py
 ```
 
 See `docs/deployment/cloud-run-deployment.md` for complete guide.
 
 ---
 
-## 🔧 Setup (00-setup)
+## 🔧 Setup
 
 **Initial project setup and configuration**
 
@@ -58,7 +58,7 @@ See `docs/deployment/cloud-run-deployment.md` for complete guide.
 
 ---
 
-## 📰 Collection (01-collection)
+## 📰 Collection
 
 **News collection from configured data sources**
 
@@ -69,7 +69,7 @@ See `docs/deployment/cloud-run-deployment.md` for complete guide.
 
 ---
 
-## ⭐ Evaluation (02-evaluation)
+## ⭐ Evaluation
 
 **AI-powered news scoring and categorization**
 
@@ -83,7 +83,7 @@ See `docs/deployment/cloud-run-deployment.md` for complete guide.
 
 ---
 
-## 👁️ Review (03-review)
+## 👁️ Review
 
 **Automated content review and quality control**
 
@@ -93,9 +93,9 @@ See `docs/deployment/cloud-run-deployment.md` for complete guide.
 
 ---
 
-## ✅ Verification (03-verification, 05-verification)
+## ✅ Verification
 
-**Data verification and summary reporting**
+**Post-review data verification and summary reporting**
 
 | Script | Purpose |
 |--------|---------|
@@ -105,18 +105,37 @@ See `docs/deployment/cloud-run-deployment.md` for complete guide.
 
 ---
 
-## 📢 Publishing (04-publish)
+## ✅ Post-Verification
+
+**Publishing verification and post-publish checks**
+
+| Script | Purpose |
+|--------|---------|
+| (Scripts to be added) | Verification after publishing |
+
+---
+
+## 📢 Publishing
 
 **Multi-channel publishing and distribution**
+
+### Configuration Scripts
 
 | Script | Purpose |
 |--------|---------|
 | `init_publish_priorities.py` | Initialize publishing priorities |
 | `show_publish_priorities.py` | Display publishing configuration |
-| `publish_to_wechat.py` | Publish to WeChat channel |
-| `test_wechat_publish.py` | Test WeChat publishing |
-| `full_wechat_workflow.py` | Full WeChat workflow testing |
 | `show_data_sources.py` | List configured data sources |
+
+### Publishing Scripts
+
+| Script | Purpose |
+|--------|---------|
+| `send_top_news_email.py` | Send top news via email (individual) |
+| `send_top_ai_news_digest.py` | Send consolidated AI news digest (card layout) |
+| `send_top_ai_news_to_github.py` | Publish top AI news to GitHub |
+| `publish_to_wechat.py` | Publish to WeChat channel |
+| `full_wechat_workflow.py` | Full WeChat workflow testing |
 
 ### Publishing Priorities
 
@@ -130,7 +149,7 @@ See `docs/guides/priority-publishing.md` for complete guide.
 
 ---
 
-## 🗄️ Initialization (06-initialization)
+## 🗄️ Initialization
 
 **Database and cache initialization**
 
@@ -140,27 +159,47 @@ See `docs/guides/priority-publishing.md` for complete guide.
 
 ---
 
-## 🧪 Testing (tests)
+## 🧪 Testing (scripts/tests/)
 
 **Automated test and validation scripts**
 
+All test scripts follow the `test_*.py` naming convention for consistency.
+
 | Script | Purpose |
 |--------|---------|
-| `run_priority_publishing_test.py` | Test priority publishing |
-| `run_complete_e2e_test.py` | Full end-to-end workflow test |
-| `run_multi_channel_publishing_test.py` | Multi-channel publishing test |
+| `test_publishing_priority.py` | Test priority publishing (Email → GitHub → WeChat) |
+| `test_e2e_complete.py` | Full end-to-end workflow test (Collection → Scoring → Review → Publishing) |
+| `test_publishing_multi_channel.py` | Multi-channel publishing test (WeChat, GitHub, Email) |
+| `test_email_verification.py` | Email system verification and testing |
+| `test_wechat_publish.py` | Test WeChat publishing functionality |
 | `test_html_cleaner.py` | Test HTML cleaning utilities |
-| `test_publishing_service.py` | Test publishing service |
-| `test_review_service.py` | Test review service |
+| `test_publishing_service.py` | Test publishing service functionality |
+| `test_review_service.py` | Test review service functionality |
+
+### Naming Convention
+
+- **Prefix**: All test scripts use `test_` prefix (not `run_`)
+- **Format**: `test_<domain>_<function>.py`
+  - `test_e2e_complete.py` - End-to-end tests
+  - `test_publishing_priority.py` - Priority publishing tests
+  - `test_publishing_multi_channel.py` - Multi-channel publishing tests
+  - `test_publishing_service.py` - Publishing service unit tests
+  - `test_email_verification.py` - Email system tests
 
 ### Usage
 
 ```bash
-# Test publishing (3 articles, dry-run)
-python scripts/tests/run_priority_publishing_test.py 3 --dry-run
+# Test publishing with priority (5 articles, dry-run)
+python scripts/tests/test_publishing_priority.py 5 --dry-run
 
-# Test publishing (actual)
-python scripts/tests/run_priority_publishing_test.py 3
+# Test publishing with priority (actual)
+python scripts/tests/test_publishing_priority.py 5
+
+# Test complete end-to-end workflow
+python scripts/tests/test_e2e_complete.py 10
+
+# Test multi-channel publishing
+python scripts/tests/test_publishing_multi_channel.py wechat,github,email 5
 ```
 
 ---
@@ -180,33 +219,39 @@ python scripts/tests/run_priority_publishing_test.py 3
 ### Daily News Processing
 
 ```bash
-python scripts/01-collection/collect_news.py
-python scripts/02-evaluation/score_collected_news.py
-python scripts/03-review/auto_review_articles.py
-python scripts/04-publish/show_publish_priorities.py
+python scripts/collection/collect_news.py
+python scripts/evaluation/score_collected_news.py
+python scripts/review/auto_review_articles.py
+python scripts/publish/show_publish_priorities.py
 ```
 
 ### Setup
 
 ```bash
-python scripts/00-setup/1_init_data_sources.py
-python scripts/00-setup/2_configure_authors.py
-python scripts/04-publish/init_publish_priorities.py
+python scripts/setup/1_init_data_sources.py
+python scripts/setup/2_configure_authors.py
+python scripts/publish/init_publish_priorities.py
 ```
 
 ### Publishing
 
 ```bash
-python scripts/04-publish/init_publish_priorities.py
-python scripts/tests/run_priority_publishing_test.py 3 --dry-run
-python scripts/tests/run_priority_publishing_test.py 3
+python scripts/publish/init_publish_priorities.py
+python scripts/tests/test_publishing_priority.py 3 --dry-run
+python scripts/tests/test_publishing_priority.py 3
+```
+
+### Email Publishing (Consolidated AI News Digest)
+
+```bash
+python scripts/publish/send_top_ai_news_digest.py
 ```
 
 ### Deployment
 
 ```bash
-python scripts/00-deployment/deploy_to_cloud_run.py --dry-run
-python scripts/00-deployment/deploy_to_cloud_run.py
+python scripts/deployment/deploy_to_cloud_run.py --dry-run
+python scripts/deployment/deploy_to_cloud_run.py
 ```
 
 ---
@@ -215,15 +260,55 @@ python scripts/00-deployment/deploy_to_cloud_run.py
 
 | Phase | Script |
 |-------|--------|
-| Setup | `scripts/00-setup/1_init_data_sources.py` |
-| Collect | `scripts/01-collection/collect_news.py` |
-| Evaluate | `scripts/02-evaluation/score_collected_news.py` |
-| Review | `scripts/03-review/auto_review_articles.py` |
-| Publish | `scripts/04-publish/init_publish_priorities.py` |
-| Deploy | `scripts/00-deployment/deploy_to_cloud_run.py` |
-| Test | `scripts/tests/run_complete_e2e_test.py` |
+| Setup | `scripts/setup/1_init_data_sources.py` |
+| Collect | `scripts/collection/collect_news.py` |
+| Evaluate | `scripts/evaluation/score_collected_news.py` |
+| Review | `scripts/review/auto_review_articles.py` |
+| Verify | `scripts/verification/view_summary.py` |
+| Publish (Config) | `scripts/publish/init_publish_priorities.py` |
+| Publish (Email) | `scripts/publish/send_top_ai_news_digest.py` |
+| Publish (GitHub) | `scripts/publish/send_top_ai_news_to_github.py` |
+| Publish (WeChat) | `scripts/publish/publish_to_wechat.py` |
+| Deploy | `scripts/deployment/deploy_to_cloud_run.py` |
+| Test (E2E) | `scripts/tests/test_e2e_complete.py` |
+| Test (Priority) | `scripts/tests/test_publishing_priority.py` |
+
+---
+
+## 📝 File Naming Conventions
+
+### Operational Scripts (Business Logic)
+
+- **Publishing**: `send_*.py`, `publish_*.py`
+  - Example: `send_top_ai_news_digest.py`, `publish_to_wechat.py`
+- **Configuration**: `init_*.py`, `show_*.py`
+  - Example: `init_publish_priorities.py`, `show_publish_priorities.py`
+- **Data Processing**: `collect_*.py`, `score_*.py`, `auto_*.py`, `verify_*.py`
+  - Example: `collect_news.py`, `score_collected_news.py`, `auto_review_articles.py`
+
+### Test Scripts (scripts/tests/)
+
+- **All test scripts**: `test_*.py` prefix (NEVER `run_*`)
+  - Example: `test_publishing_priority.py`, `test_e2e_complete.py`
+
+---
+
+## 🔄 Directory Structure and Purpose
+
+### Root-level `tests/` vs `scripts/tests/`
+
+- **`tests/` directory**: Unit tests, integration tests, and E2E tests for the source code (`src/`)
+  - Structured as: `tests/unit/`, `tests/integration/`, `tests/e2e/`
+  - Tests core business logic and APIs
+  - Run with: `pytest tests/`
+
+- **`scripts/tests/` directory**: Workflow and system tests for the automation scripts
+  - Tests complete end-to-end workflows (Collection → Scoring → Review → Publishing)
+  - Tests multi-channel publishing coordination
+  - Tests publishing priority logic
+  - Run individually as needed
 
 ---
 
 **Last Updated**: 2025-11-03
-**Version**: 1.0
+**Version**: 2.0

@@ -55,9 +55,9 @@ echo -e "${BLUE}[步骤 1/3] 采集新闻数据${NC}"
 echo -e "${BLUE}═══════════════════════════════════════════════════════════${NC}"
 echo ""
 
-if [ -f "$PROJECT_ROOT/scripts/01-collection/collect_news.py" ]; then
+if [ -f "$PROJECT_ROOT/scripts/collection/collect_news.py" ]; then
     cd "$PROJECT_ROOT"
-    $PYTHON_CMD scripts/01-collection/collect_news.py
+    $PYTHON_CMD scripts/collection/collect_news.py
     COLLECT_STATUS=$?
 
     if [ $COLLECT_STATUS -eq 0 ]; then
@@ -86,9 +86,9 @@ echo -e "${BLUE}[步骤 2/3] AI 评分${NC}"
 echo -e "${BLUE}═══════════════════════════════════════════════════════════${NC}"
 echo ""
 
-if [ -f "$PROJECT_ROOT/scripts/02-evaluation/score_batch.py" ]; then
+if [ -f "$PROJECT_ROOT/scripts/evaluation/score_batch.py" ]; then
     cd "$PROJECT_ROOT"
-    $PYTHON_CMD scripts/02-evaluation/score_batch.py
+    $PYTHON_CMD scripts/evaluation/score_batch.py
     SCORE_STATUS=$?
 
     if [ $SCORE_STATUS -eq 0 ]; then
@@ -100,7 +100,7 @@ if [ -f "$PROJECT_ROOT/scripts/02-evaluation/score_batch.py" ]; then
         echo "  - API 配额不足"
         echo "  - 网络连接问题"
         echo ""
-        echo -e "${YELLOW}建议: 运行 scripts/02-evaluation/test_api.py 诊断 API 问题${NC}"
+        echo -e "${YELLOW}建议: 运行 scripts/evaluation/test_api.py 诊断 API 问题${NC}"
     fi
 else
     echo -e "${RED}错误: 找不到评分脚本${NC}"
@@ -118,9 +118,9 @@ echo -e "${BLUE}[步骤 3/3] 查看数据库结果${NC}"
 echo -e "${BLUE}═══════════════════════════════════════════════════════════${NC}"
 echo ""
 
-if [ -f "$PROJECT_ROOT/scripts/03-verification/view_summary.py" ]; then
+if [ -f "$PROJECT_ROOT/scripts/verification/view_summary.py" ]; then
     cd "$PROJECT_ROOT"
-    $PYTHON_CMD scripts/03-verification/view_summary.py
+    $PYTHON_CMD scripts/verification/view_summary.py
     VIEW_STATUS=$?
 
     if [ $VIEW_STATUS -eq 0 ]; then

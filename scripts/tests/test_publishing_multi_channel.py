@@ -9,12 +9,12 @@
 4. 生成发布统计报告
 
 使用方法:
-    python scripts/run_multi_channel_publishing_test.py [channels] [num_articles]
+    python scripts/tests/test_publishing_multi_channel.py [channels] [num_articles]
 
 示例:
-    python scripts/run_multi_channel_publishing_test.py wechat,github,email 5
-    python scripts/run_multi_channel_publishing_test.py wechat 3
-    python scripts/run_multi_channel_publishing_test.py all  # 使用所有已配置的渠道
+    python scripts/tests/test_publishing_multi_channel.py wechat,github,email 5
+    python scripts/tests/test_publishing_multi_channel.py wechat 3
+    python scripts/tests/test_publishing_multi_channel.py all  # 使用所有已配置的渠道
 """
 
 import sys

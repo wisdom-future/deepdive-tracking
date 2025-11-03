@@ -10,12 +10,12 @@ This script runs the complete news processing pipeline from start to finish:
 5. Publish to WeChat
 
 Usage:
-    python scripts/run_complete_e2e_test.py [num_articles] [--skip-collection]
+    python scripts/tests/test_e2e_complete.py [num_articles] [--skip-collection]
 
 Examples:
-    python scripts/run_complete_e2e_test.py 10          # Collect 10 new articles
-    python scripts/run_complete_e2e_test.py 5 --skip-collection  # Skip collection, only score
-    python scripts/run_complete_e2e_test.py             # Use default (3 articles)
+    python scripts/tests/test_e2e_complete.py 10          # Collect 10 new articles
+    python scripts/tests/test_e2e_complete.py 5 --skip-collection  # Skip collection, only score
+    python scripts/tests/test_e2e_complete.py             # Use default (3 articles)
 """
 
 import sys

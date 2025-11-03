@@ -8,11 +8,11 @@
 4. 支持 dry-run 模式
 
 使用方式:
-    python scripts/run_priority_publishing_test.py [article_limit] [--dry-run]
+    python scripts/tests/test_publishing_priority.py [article_limit] [--dry-run]
 
 示例:
-    python scripts/run_priority_publishing_test.py 5
-    python scripts/run_priority_publishing_test.py 5 --dry-run
+    python scripts/tests/test_publishing_priority.py 5
+    python scripts/tests/test_publishing_priority.py 5 --dry-run
 """
 
 import sys
