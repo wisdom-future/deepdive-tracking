@@ -11,7 +11,7 @@ import logging
 from datetime import datetime
 
 # Add project root to Python path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../..'))
 
 # Configure logging for production
 logging.basicConfig(
@@ -40,8 +40,25 @@ def get_summary_with_limit(text: str, max_length: int = 100) -> str:
     return truncated + "..."
 
 
+def format_publish_date(dt) -> str:
+    """Format publish date in user-friendly format"""
+    if not dt:
+        return "Unknown"
+
+    # Format: 2025-11-04 15:30
+    return dt.strftime("%Y-%m-%d %H:%M")
+
+
 def generate_bilingual_email_html(news_items: list, date_str: str) -> str:
-    """Generate clean, mobile-friendly HTML email with bilingual summaries from AI"""
+    """
+    Generate clean, mobile-friendly HTML email with bilingual summaries
+
+    设计原则 (Design Principles):
+    1. 移动优先 (Mobile-first): 充足的padding和触摸目标大小
+    2. 可读性 (Readability): 清晰的层级结构和视觉分隔
+    3. 双语支持 (Bilingual): 中英文摘要分别独立显示
+    4. 专业性 (Professional): 现代化设计,支持所有主流邮件客户端
+    """
 
     news_items_html = []
 
@@ -49,66 +66,55 @@ def generate_bilingual_email_html(news_items: list, date_str: str) -> str:
         if not news.raw_news:
             continue
 
-        # Get summaries directly from database (AI already generated both Chinese and English)
-        summary_zh = get_summary_with_limit(news.summary_pro or news.summary_sci or "无摘要", 120)
+        # Get Chinese summary
+        summary_zh = news.summary_pro or news.summary_sci or "暂无中文摘要"
+        summary_zh = get_summary_with_limit(summary_zh, 150)
 
-        # Get English summary from database with strict validation
+        # Get English summary with proper fallback
         summary_en = news.summary_pro_en or news.summary_sci_en
-
-        # Validate English summary - must be meaningful and not an error message
         if not summary_en or len(summary_en.strip()) < 20:
-            # If English summary is missing or too short, use Chinese as fallback
-            summary_en = summary_zh
-
-        summary_en = get_summary_with_limit(summary_en, 120)
+            summary_en = "(English summary not available)"
+        summary_en = get_summary_with_limit(summary_en, 150)
 
         score = news.score or 0
         source_url = news.raw_news.url or "https://deepdive-tracking.github.io"
         author = news.raw_news.source_name or news.raw_news.author or "Unknown"
         category = news.category or "AI News"
+        published_date = format_publish_date(news.raw_news.published_at)
 
         # Score color
         if score >= 80:
-            color = "#10b981"
+            color = "#10b981"  # Green
         elif score >= 60:
-            color = "#3b82f6"
+            color = "#3b82f6"  # Blue
         elif score >= 40:
-            color = "#f59e0b"
+            color = "#f59e0b"  # Orange
         else:
-            color = "#ef4444"
+            color = "#ef4444"  # Red
 
-        # Table-based layout for better email client compatibility
+        # Enhanced mobile-friendly layout with proper padding
         item_html = f"""
-<table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin-bottom:25px;">
+<table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin-bottom:30px;">
   <tr>
-    <td style="border-left:4px solid {color};background:#f9fafb;padding:20px;">
+    <td style="border-left:5px solid {color};background:#ffffff;padding:25px;border-radius:8px;box-shadow:0 2px 4px rgba(0,0,0,0.05);">
       <!-- Title and Score Row -->
-      <table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin-bottom:15px;">
+      <table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin-bottom:18px;">
         <tr>
-          <td style="font-size:16px;font-weight:600;color:#1f2937;line-height:1.5;padding-right:15px;">
+          <td style="font-size:18px;font-weight:700;color:#1f2937;line-height:1.5;padding-right:15px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;">
             {idx}. {news.raw_news.title}
           </td>
-          <td align="right" valign="top" style="background:{color};color:white;padding:5px 12px;border-radius:4px;font-size:13px;font-weight:600;white-space:nowrap;width:50px;">
+          <td align="right" valign="top" style="background:{color};color:white;padding:8px 16px;border-radius:6px;font-size:15px;font-weight:700;white-space:nowrap;min-width:60px;">
             {int(score)}
           </td>
         </tr>
       </table>
 
-      <!-- Summary Section -->
-      <table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin-bottom:15px;">
+      <!-- Publish Date and Metadata -->
+      <table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin-bottom:18px;">
         <tr>
-          <td style="color:#4b5563;font-size:14px;line-height:1.6;">
-            <p style="margin:0 0 8px 0;"><strong>📌 摘要（中文）:</strong></p>
-            <p style="margin:0 0 15px 0;">{summary_zh}</p>
-            <p style="margin:0 0 8px 0;"><strong>📄 Summary (English):</strong></p>
-            <p style="margin:0;">{summary_en}</p>
+          <td style="font-size:13px;color:#6b7280;padding-right:20px;">
+            📅 发布时间: {published_date}
           </td>
-        </tr>
-      </table>
-
-      <!-- Category and Author Row -->
-      <table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin-bottom:15px;">
-        <tr>
           <td style="font-size:13px;color:#6b7280;padding-right:20px;">
             📂 {category}
           </td>
@@ -118,12 +124,32 @@ def generate_bilingual_email_html(news_items: list, date_str: str) -> str:
         </tr>
       </table>
 
+      <!-- Summary Section - Chinese -->
+      <table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin-bottom:18px;background:#f8fafc;padding:18px;border-radius:6px;">
+        <tr>
+          <td style="color:#334155;font-size:14px;line-height:1.7;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;">
+            <p style="margin:0 0 10px 0;font-weight:600;color:#0f172a;"><strong>📌 中文摘要:</strong></p>
+            <p style="margin:0;color:#475569;">{summary_zh}</p>
+          </td>
+        </tr>
+      </table>
+
+      <!-- Summary Section - English -->
+      <table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin-bottom:20px;background:#f0f9ff;padding:18px;border-radius:6px;">
+        <tr>
+          <td style="color:#1e3a8a;font-size:14px;line-height:1.7;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;">
+            <p style="margin:0 0 10px 0;font-weight:600;color:#1e40af;"><strong>📄 English Summary:</strong></p>
+            <p style="margin:0;color:#1e40af;">{summary_en}</p>
+          </td>
+        </tr>
+      </table>
+
       <!-- Read More Link -->
       <table width="100%" border="0" cellspacing="0" cellpadding="0">
         <tr>
-          <td>
-            <a href="{source_url}" target="_blank" style="color:{color};text-decoration:none;font-weight:600;border-bottom:1px solid {color};display:inline-block;">
-              阅读全文 / Read More →
+          <td align="center" style="padding:15px 0 0 0;">
+            <a href="{source_url}" target="_blank" style="display:inline-block;background:{color};color:white;padding:12px 30px;border-radius:6px;text-decoration:none;font-weight:600;font-size:14px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;">
+              阅读原文 / Read Full Article →
             </a>
           </td>
         </tr>
@@ -150,150 +176,79 @@ def generate_bilingual_email_html(news_items: list, date_str: str) -> str:
         }}
 
         body {{
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, 'Noto Sans SC', 'Microsoft YaHei', sans-serif;
             line-height: 1.6;
             color: #1f2937;
             background: #f3f4f6;
             padding: 0;
+            margin: 0;
             min-height: 100vh;
-        }}
-
-        .wrapper {{
-            width: 100%;
-            background: #f3f4f6;
-            padding: 20px 0;
-        }}
-
-        .container {{
-            max-width: 600px;
-            margin: 0 auto;
-            background: #ffffff;
-            width: 100%;
-        }}
-
-        .header {{
-            background: linear-gradient(135deg, #1f2937 0%, #374151 100%);
-            color: white;
-            padding: 30px 20px;
-            text-align: center;
-        }}
-
-        .header h1 {{
-            font-size: 24px;
-            font-weight: 700;
-            margin-bottom: 10px;
-            line-height: 1.3;
-        }}
-
-        .header-info {{
-            font-size: 13px;
-            opacity: 0.9;
-            line-height: 1.4;
-        }}
-
-        .content {{
-            padding: 20px;
-        }}
-
-        .footer {{
-            text-align: center;
-            padding: 20px;
-            border-top: 1px solid #e5e7eb;
-            font-size: 12px;
-            color: #6b7280;
-            background: #f9fafb;
-        }}
-
-        .footer p {{
-            margin: 5px 0;
-            line-height: 1.5;
         }}
 
         /* Mobile optimization */
         @media (max-width: 600px) {{
-            .wrapper {{
-                padding: 10px 0;
+            body {{
+                padding: 0 !important;
             }}
 
-            .header {{
-                padding: 20px 15px;
-            }}
-
-            .header h1 {{
-                font-size: 20px;
-            }}
-
-            .content {{
-                padding: 15px;
-            }}
-
-            .footer {{
-                padding: 15px;
-                font-size: 11px;
-            }}
-
-            table[width="100%"] {{
+            table[width="600"] {{
                 width: 100% !important;
+                min-width: 320px !important;
             }}
 
             td {{
-                display: block;
-                width: 100% !important;
-                text-align: left !important;
-                padding: 10px 0 !important;
+                padding: 15px !important;
             }}
 
-            .title-row td:last-child {{
-                text-align: right !important;
-                padding: 0 !important;
-                width: auto !important;
+            h1 {{
+                font-size: 22px !important;
+            }}
+
+            p {{
+                font-size: 14px !important;
             }}
         }}
 
-        /* iPad/Tablet optimization */
-        @media (min-width: 601px) and (max-width: 900px) {{
-            .container {{
-                max-width: 95%;
-            }}
-
-            .header {{
-                padding: 25px 20px;
-            }}
-
-            .header h1 {{
-                font-size: 22px;
+        /* Dark mode support */
+        @media (prefers-color-scheme: dark) {{
+            body {{
+                background: #1f2937 !important;
             }}
         }}
     </style>
 </head>
 <body>
-    <div class="wrapper">
+    <div style="width:100%;background:#f3f4f6;padding:20px 10px;">
         <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background:#f3f4f6;">
             <tr>
-                <td align="center" style="padding:20px 0;">
-                    <table width="600" border="0" cellspacing="0" cellpadding="0" style="max-width:100%;background:#ffffff;border-collapse:collapse;">
+                <td align="center" style="padding:0;">
+                    <table width="600" border="0" cellspacing="0" cellpadding="0" style="max-width:100%;background:#ffffff;border-collapse:collapse;border-radius:12px;overflow:hidden;box-shadow:0 4px 6px rgba(0,0,0,0.1);">
                         <!-- Header -->
                         <tr>
-                            <td style="background:linear-gradient(135deg, #1f2937 0%, #374151 100%);color:white;padding:30px 20px;text-align:center;">
-                                <h1 style="font-size:24px;font-weight:700;margin:0 0 10px 0;line-height:1.3;">📰 AI News Daily Digest</h1>
-                                <p style="font-size:13px;opacity:0.9;margin:0;line-height:1.4;">
-                                    Published: {date_str} | Total: {len(news_items)} items | Curated from 300+ sources
+                            <td style="background:linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);color:white;padding:40px 30px;text-align:center;">
+                                <h1 style="font-size:28px;font-weight:800;margin:0 0 15px 0;line-height:1.3;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;">📰 AI News Daily Digest</h1>
+                                <p style="font-size:15px;opacity:0.95;margin:0;line-height:1.5;font-weight:500;">
+                                    发布时间: {date_str} | 共 {len(news_items)} 条精选 | 来自300+优质源
+                                </p>
+                                <p style="font-size:14px;opacity:0.9;margin:10px 0 0 0;line-height:1.5;">
+                                    Published: {date_str} | {len(news_items)} Selected Items | From 300+ Sources
                                 </p>
                             </td>
                         </tr>
 
                         <!-- Content -->
                         <tr>
-                            <td style="padding:20px;">
+                            <td style="padding:30px;background:#f8fafc;">
                                 {("".join(news_items_html))}
                             </td>
                         </tr>
 
                         <!-- Footer -->
                         <tr>
-                            <td style="border-top:1px solid #e5e7eb;background:#f9fafb;padding:20px;text-align:center;font-size:12px;color:#6b7280;">
-                                <p style="margin:0 0 5px 0;line-height:1.5;">Generated by <strong>DeepDive Tracking</strong> - AI News Intelligence Platform</p>
-                                <p style="margin:0;line-height:1.5;">© 2025 DeepDive Tracking. All rights reserved.</p>
+                            <td style="border-top:2px solid #e5e7eb;background:#ffffff;padding:30px;text-align:center;font-size:13px;color:#6b7280;">
+                                <p style="margin:0 0 8px 0;line-height:1.6;font-weight:500;color:#374151;">由 <strong style="color:#1e3a8a;">DeepDive Tracking</strong> 提供 - AI资讯智能平台</p>
+                                <p style="margin:0 0 8px 0;line-height:1.6;">Generated by <strong>DeepDive Tracking</strong> - AI News Intelligence Platform</p>
+                                <p style="margin:0;line-height:1.6;color:#9ca3af;">© 2025 DeepDive Tracking. All rights reserved.</p>
                             </td>
                         </tr>
                     </table>
@@ -381,13 +336,10 @@ async def main():
         for idx, news in enumerate(top_news, 1):
             title = news.raw_news.title if news.raw_news else "Unknown"
             score = news.score or 0
-            summary_zh = news.summary_pro or news.summary_sci or "N/A"
-            summary_en = news.summary_pro_en or news.summary_sci_en or "N/A"
+            published = format_publish_date(news.raw_news.published_at) if news.raw_news else "Unknown"
 
-            logger.info(f"  [{idx}] {title} (Score: {score})")
-            logger.debug(f"      Chinese: {summary_zh[:50]}...")
-            logger.debug(f"      English: {summary_en[:50]}...")
-            print(f"    [{idx}] Score:{score:3.0f} | {title[:60]}")
+            logger.info(f"  [{idx}] {title} (Score: {score}, Published: {published})")
+            print(f"    [{idx}] Score:{score:3.0f} | {published} | {title[:50]}")
 
         print("  Status: PASS")
 
@@ -406,7 +358,7 @@ async def main():
 
     try:
         recipient_email = settings.smtp_from_email or "hello.junjie.duan@gmail.com"
-        date_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        date_str = datetime.now().strftime("%Y-%m-%d %H:%M")
 
         html_content = generate_bilingual_email_html(top_news, date_str)
         html_size = len(html_content)
