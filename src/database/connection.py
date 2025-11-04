@@ -69,7 +69,7 @@ def _init_db_cloud_sql(settings):
             db_password = os.getenv("CLOUDSQL_PASSWORD", "")  # password from env var only
             db_name = os.getenv("CLOUDSQL_DATABASE", "deepdive_db")
 
-            print("[DB] ✓ Requesting connection from Cloud SQL Connector...")
+            print("[DB] Requesting connection from Cloud SQL Connector...")
             return connector.connect(
                 "deepdive-engine:asia-east1:deepdive-db",
                 "pg8000",
@@ -184,10 +184,9 @@ class _EngineProxy:
 # Export engine as a lazy-loaded proxy for backward compatibility
 engine = _EngineProxy()
 
-# 🚀 Force immediate initialization in Cloud Run to catch errors early
-# 检测Cloud Run环境并立即初始化，避免延迟初始化导致的问题
+# Force immediate initialization in Cloud Run to catch errors early
 if os.getenv("K_SERVICE") or os.getenv("CLOUD_RUN"):
-    print("[DB] 🔧 Cloud Run detected - initializing database connection immediately...")
+    print("[DB] Cloud Run detected - initializing database connection immediately...")
     _init_db()
 
 
