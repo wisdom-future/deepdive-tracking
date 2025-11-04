@@ -13,7 +13,7 @@ class RawNews(BaseModel, Base):
 
     source_id: Mapped[int] = mapped_column(ForeignKey("data_sources.id"), nullable=False)
     title: Mapped[str] = mapped_column(String(512), nullable=False)
-    url: Mapped[str] = mapped_column(String(2048), unique=True, nullable=False)
+    url: Mapped[str] = mapped_column(String(2048), unique=False, nullable=False)  # Allow duplicate URLs for tracking
     content: Mapped[Optional[str]] = mapped_column(Text)
     html_content: Mapped[Optional[bytes]] = mapped_column(LargeBinary)
     language: Mapped[str] = mapped_column(String(10), default="en")
