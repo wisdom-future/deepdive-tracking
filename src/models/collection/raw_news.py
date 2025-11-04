@@ -17,7 +17,7 @@ class RawNews(BaseModel, Base):
     content: Mapped[Optional[str]] = mapped_column(Text)
     html_content: Mapped[Optional[bytes]] = mapped_column(LargeBinary)
     language: Mapped[str] = mapped_column(String(10), default="en")
-    hash: Mapped[str] = mapped_column(String(64), unique=True, nullable=False)
+    hash: Mapped[str] = mapped_column(String(64), unique=False, nullable=False, index=True)  # Allow duplicates for tracking, keep index for performance
     author: Mapped[Optional[str]] = mapped_column(String(255))
     source_name: Mapped[Optional[str]] = mapped_column(String(255))
     published_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), nullable=False)
