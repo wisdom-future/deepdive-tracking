@@ -757,7 +757,7 @@ class GitHubPublisher:
         if not repo_path.exists():
             # 克隆仓库
             self.logger.info(f"克隆仓库: {self.github_repo}")
-            repo_url = f"https://{self.github_username}:{self.github_token}@github.com/{self.github_repo}.git"  # noqa: S105
+            repo_url = f"https://x-access-token:{self.github_token}@github.com/{self.github_repo}.git"  # noqa: S105
             await self._run_git_command(
                 ["git", "clone", repo_url, str(repo_path)],
                 cwd=None
