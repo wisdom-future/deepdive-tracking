@@ -67,7 +67,7 @@ def _init_db_cloud_sql(settings):
             db_user = os.getenv("CLOUDSQL_USER", "deepdive_user")
             db_name = os.getenv("CLOUDSQL_DATABASE", "deepdive_db")
 
-            print("[DB] Requesting connection from Cloud SQL Connector (proxy mode, no password)...")
+            print("[DB] Requesting connection from Cloud SQL Connector (IAM-based auth)...")
             # Cloud SQL Connector handles all authentication via GCP IAM
             # No password needed - the connector proxies the connection securely
             return connector.connect(
@@ -88,7 +88,6 @@ def _init_db_cloud_sql(settings):
             pool_timeout=settings.database_pool_timeout,
             echo=settings.debug,
             pool_pre_ping=True,  # Test connections before using
-            connect_args={"scram_client_raw_response": True},
         )
         print("[DB] SQLAlchemy engine created successfully")
 
