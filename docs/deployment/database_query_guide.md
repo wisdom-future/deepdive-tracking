@@ -4,9 +4,9 @@
 
 你现在可以直接通过API查看数据库中的数据。无需复杂的数据库工具！
 
-### 方法1️⃣：在浏览器中直接查看（需要认证）
+### 方法1️⃣：在浏览器中直接查看 ✅（推荐）
 
-如果看到 403 Forbidden 错误，请使用方法2（命令行）。
+需要 Google 账户认证。在浏览器中访问以下 URL，系统会自动跳转到 Google 登录页面。
 
 **查看已处理的新闻（带评分和摘要）：**
 ```
@@ -18,7 +18,12 @@ https://deepdive-tracking-orp2dcdqua-de.a.run.app/data/news?table=processed&limi
 https://deepdive-tracking-orp2dcdqua-de.a.run.app/data/news?table=raw&limit=50&offset=0
 ```
 
-⚠️ 如果浏览器显示 403 Forbidden，请改用方法2命令行查询
+**使用授权的 Google 账户登录后即可查看数据**
+
+说明：
+- 系统会要求您使用 Google 账户登录
+- 只有具有 Cloud Run Invoker 权限的账户才能访问
+- 当前授权账户：`hello.junjie.duan@gmail.com`
 
 ---
 
