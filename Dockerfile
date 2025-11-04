@@ -6,41 +6,21 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y \
     build-essential \
     postgresql-client \
+    git \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy application code first
 COPY . .
 
-# Install Python dependencies
+# Install Python dependencies from pyproject.toml
 RUN pip install --no-cache-dir \
-    fastapi \
-    uvicorn[standard] \
-    sqlalchemy \
-    psycopg2-binary \
-    redis \
-    requests \
-    pydantic-settings \
-    pydantic \
-    python-multipart \
-    openai \
-    celery \
-    httpx \
+    ".[ai]"
+
+# Install Google Cloud dependencies
+RUN pip install --no-cache-dir \
     google-cloud-secret-manager \
     cloud-sql-python-connector \
-    pg8000 \
-    feedparser \
-    beautifulsoup4 \
-    lxml \
-    python-dotenv \
-    aiohttp \
-    alembic \
-    simhash \
-    pytz \
-    loguru \
-    python-dateutil \
-    langchain \
-    numpy \
-    scikit-learn
+    pg8000
 
 # Expose port 8080 (Cloud Run standard)
 EXPOSE 8080
