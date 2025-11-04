@@ -32,10 +32,10 @@ def _init_db():
         print(f"[DB] DATABASE_URL pattern: {settings.database_url[:50] if settings.database_url else 'None'}...")
 
         if is_cloud_run or looks_like_cloud_sql_socket:
-            print("[DB] 🚀 Detected Cloud Run environment - USING Cloud SQL Connector")
+            print("[DB] Detected Cloud Run environment - USING Cloud SQL Connector")
             _init_db_cloud_sql(settings)
         else:
-            print("[DB] 🏠 Local environment - using direct connection")
+            print("[DB] Local environment - using direct connection")
             _init_db_direct(settings)
 
 
