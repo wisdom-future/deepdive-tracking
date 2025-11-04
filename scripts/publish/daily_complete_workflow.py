@@ -63,12 +63,16 @@ class DailyWorkflow:
         print(f"执行命令: {cmd}\n")
 
         try:
+            # Import os to access environment variables
+            import os
+
             result = subprocess.run(
                 cmd,
                 shell=True,
                 capture_output=True,
                 text=True,
-                timeout=600  # 10 分钟超时
+                timeout=600,  # 10 分钟超时
+                env=os.environ.copy()  # Pass environment variables to subprocess
             )
 
             if result.returncode == 0:
