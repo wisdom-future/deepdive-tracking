@@ -153,9 +153,19 @@ def create_app() -> FastAPI:
 
             logger.info("Database initialization completed successfully")
 
+            # Step 3: Initialize data sources
+            logger.info("Initializing data sources...")
+            from src.services.setup.data_source_manager import initialize_data_sources
+
+            try:
+                stats = initialize_data_sources()
+                logger.info(f"Data sources initialized: {stats}")
+            except Exception as sources_e:
+                logger.warning(f"Data source initialization had an issue: {sources_e}")
+
             return {
                 "status": "success",
-                "message": "Database tables initialized and migrations applied successfully",
+                "message": "Database tables initialized, migrations applied, and data sources initialized",
                 "timestamp": datetime.now().isoformat()
             }
 
