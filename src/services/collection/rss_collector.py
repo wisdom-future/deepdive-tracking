@@ -80,8 +80,16 @@ class RSSCollector(BaseCollector):
 
         for entry in parsed.entries[:max_items]:
             try:
-                # Extract content with fallback strategy
-                content = self._extract_content(entry)
+                # Extract content with raw HTML and cleaned text
+                content, html_content = self._extract_content(entry)
+
+                # Validate content is not empty and meets minimum quality
+                if not content or len(content.strip()) < 50:
+                    self.logger.warning(
+                        f"Skipping entry with insufficient content (len={len(content)}): "
+                        f"{entry.get('title', 'No title')}"
+                    )
+                    continue
 
                 # Detect language from content
                 language = self._detect_language(content)
@@ -96,7 +104,7 @@ class RSSCollector(BaseCollector):
                     "author": author,
                     "published_at": self._parse_published_date(entry),
                     "language": language,
-                    "html_content": None,
+                    "html_content": html_content,  # ✅ Save raw HTML
                 }
 
                 # Validate required fields
@@ -113,44 +121,50 @@ class RSSCollector(BaseCollector):
         return articles
 
     @staticmethod
-    def _extract_content(entry: Dict[str, Any]) -> str:
-        """Extract full article content with HTML cleaning.
+    def _extract_content(entry: Dict[str, Any]) -> tuple[str, str]:
+        """Extract full article content with HTML cleaning and raw HTML preservation.
 
         Tries multiple content sources with fallback strategy:
         1. content (Atom format - usually HTML)
         2. summary (RSS format - may contain HTML)
         3. description (RSS format - may contain HTML)
 
-        All content is cleaned to remove HTML tags and convert to plain text.
+        All content is cleaned to remove HTML tags and convert to plain text,
+        but the original HTML is preserved for future processing.
 
         Args:
             entry: Parsed RSS entry from feedparser
 
         Returns:
-            Cleaned article content string (plain text)
+            Tuple of (cleaned_text, raw_html):
+                - cleaned_text: Plain text content without HTML tags
+                - raw_html: Original HTML content for secondary processing
         """
-        raw_content = ""
+        raw_html = ""
 
         # Try content (Atom format - highest priority)
         if "content" in entry and entry.content:
             content_list = entry.get("content", [])
             if content_list and isinstance(content_list, list):
-                raw_content = content_list[0].get("value", "").strip()
-                if raw_content:
-                    return HTMLCleaner.clean(raw_content)
+                raw_html = content_list[0].get("value", "").strip()
+                if raw_html:
+                    cleaned_text = HTMLCleaner.clean(raw_html)
+                    return cleaned_text, raw_html
 
         # Try summary (RSS format - second priority)
         summary = entry.get("summary", "").strip()
         if summary:
-            return HTMLCleaner.clean(summary)
+            cleaned_text = HTMLCleaner.clean(summary)
+            return cleaned_text, summary
 
         # Fallback to description
         description = entry.get("description", "").strip()
         if description:
-            return HTMLCleaner.clean(description)
+            cleaned_text = HTMLCleaner.clean(description)
+            return cleaned_text, description
 
-        # Return empty string if nothing found
-        return ""
+        # Return empty strings if nothing found
+        return "", ""
 
     def _extract_author(self, entry: Dict[str, Any]) -> str:
         """Extract author with fallback to data source default.

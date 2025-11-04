@@ -13,6 +13,7 @@ from src.models import DataSource, RawNews
 from src.services.collection.base_collector import BaseCollector
 from src.services.collection.rss_collector import RSSCollector
 from src.services.collection.twitter_collector import TwitterCollector
+from src.services.collection.deduplication import ContentDeduplicator
 
 logger = logging.getLogger(__name__)
 
@@ -28,6 +29,7 @@ class CollectionManager:
         """
         self.db = db_session
         self.logger = logger
+        self.deduplicator = ContentDeduplicator()
 
     async def collect_all(self) -> Dict[str, Any]:
         """Collect data from all enabled sources.
@@ -108,17 +110,28 @@ class CollectionManager:
         duplicate_count = 0
 
         for article in articles:
-            article_hash = self._generate_hash(article["title"], article["url"])
+            # Generate both URL/title hash and content simhash
+            url_title_hash = self.deduplicator.compute_url_title_hash(
+                article["title"], article["url"]
+            )
+            content_simhash = self.deduplicator.compute_simhash(
+                article.get("content", "")
+            )
 
-            # Check if already exists
-            existing = self.db.query(RawNews).filter(RawNews.hash == article_hash).first()
+            # Check if already exists (exact match on URL/title)
+            existing = self.db.query(RawNews).filter(
+                RawNews.hash == url_title_hash
+            ).first()
 
+            is_duplicate = False
             if existing:
+                is_duplicate = True
                 duplicate_count += 1
-                self.logger.debug(f"Duplicate found: {article['title']}")
-                continue
+                self.logger.debug(
+                    f"Duplicate found (exact): {article['title']}"
+                )
 
-            # Create new raw news item
+            # ✅ Save ALL articles, including duplicates (with is_duplicate flag)
             raw_news = RawNews(
                 source_id=source.id,
                 title=article["title"],
@@ -126,16 +139,19 @@ class CollectionManager:
                 content=article.get("content"),
                 html_content=article.get("html_content"),
                 language=article.get("language", "en"),
-                hash=article_hash,
+                hash=url_title_hash,
                 author=article.get("author"),
                 source_name=source.name,
                 published_at=article["published_at"],
                 fetched_at=datetime.now(article["published_at"].tzinfo),
                 status="raw",
+                is_duplicate=is_duplicate,  # ✅ Mark duplicates
             )
 
             self.db.add(raw_news)
-            new_count += 1
+
+            if not is_duplicate:
+                new_count += 1
 
         # Commit all new items
         try:
