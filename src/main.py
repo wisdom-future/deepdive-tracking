@@ -361,8 +361,8 @@ def create_app() -> FastAPI:
                     "title": p.raw_news.title if p.raw_news else "Unknown",
                     "score": p.score,
                     "category": p.category,
-                    "summary_zh": p.summary_pro or p.summary_sci,
-                    "summary_en": p.summary_pro_en or p.summary_sci_en,
+                    "summary_zh": p.summary_pro or p.summary_sci or "No summary available",
+                    "summary_en": (p.summary_pro_en or p.summary_sci_en) or "No English summary available",
                     "confidence": p.confidence,
                     "created_at": p.created_at.isoformat() if p.created_at else None
                 } for p in records]
