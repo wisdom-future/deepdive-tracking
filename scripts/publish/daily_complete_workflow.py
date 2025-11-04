@@ -187,11 +187,11 @@ class DailyWorkflow:
         ):
             print("\n[WARN] 采集失败，但继续处理已有的新闻...")
 
-        # Step 2: AI 评分
+        # Step 2: AI 评分 (评分200篇以确保多样性)
         if not self.run_command(
-            "python scripts/evaluation/score_collected_news.py 50",
+            "python scripts/evaluation/score_collected_news.py 200",
             "评分",
-            "对采集的新闻进行 AI 智能评分"
+            "对采集的新闻进行 AI 智能评分 (200篇，确保来源多样性)"
         ):
             print("\n[FAILED] 评分失败，无法继续")
             return self.print_summary()
