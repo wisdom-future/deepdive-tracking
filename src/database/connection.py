@@ -66,14 +66,16 @@ def _init_db_cloud_sql(settings):
             print("[DB] getconn() called - requesting connection from Cloud SQL Connector")
             db_user = os.getenv("CLOUDSQL_USER", "deepdive_user")
             db_name = os.getenv("CLOUDSQL_DATABASE", "deepdive_db")
+            db_password = os.getenv("CLOUDSQL_PASSWORD", "")
 
             print("[DB] Requesting connection from Cloud SQL Connector (proxy auth)...")
-            # Cloud SQL Connector handles all authentication via GCP IAM
-            # When using the connector, database credentials are not needed
+            # Cloud SQL Connector handles authentication via GCP IAM proxy
+            # However, pg8000 driver still requires a password parameter (can be empty string)
             return connector.connect(
                 "deepdive-engine:asia-east1:deepdive-db",
                 "pg8000",
                 user=db_user,
+                password=db_password,
                 db=db_name,
                 ip_type=ip_type,
             )
