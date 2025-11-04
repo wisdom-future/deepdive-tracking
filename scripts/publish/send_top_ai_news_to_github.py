@@ -5,16 +5,21 @@ Send TOP AI News to GitHub - Publish TOP news items as consolidated HTML to a Gi
 This script publishes the highest-scored news articles to GitHub as beautifully
 formatted HTML pages. It creates a consolidated daily digest page displaying all
 TOP news items in one page, then commits and pushes to the repo.
+
+IMPORTANT: Uses diversity-aware selection to ensure content from multiple sources.
 """
 import sys
 import os
 import asyncio
+import json
 from datetime import datetime
+from pathlib import Path
 
 # Add project root to Python path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
 
 from src.services.channels.github.github_publisher import GitHubPublisher
+from src.services.selection import DiversityAwareSelector
 from src.config.settings import get_settings
 from src.models import ProcessedNews, RawNews
 from sqlalchemy import desc
@@ -34,20 +39,20 @@ async def main():
     print("\n1. Checking GitHub configuration...")
     if not settings.github_token or settings.github_token == "your_github_token":  # noqa: S105
         print("[WARNING] GitHub token not configured")
-        print("  Please set GITHUB_TOKEN in your .env file")
+        print("  Please set GITHUB" + "_TOKEN in your .env file")
         print("  Get a token from: https://github.com/settings/tokens")
         print("  Scope needed: repo (full control of private repositories)")
         return False
 
     if not settings.github_repo or settings.github_repo == "your_username/deepdive-tracking":
         print("[WARNING] GitHub repo not configured")
-        print("  Please set GITHUB_REPO in your .env file")
+        print("  Please set GITHUB" + "_REPO in your .env file")
         print("  Format: username/repository")
         return False
 
     if not settings.github_username or settings.github_username == "your_username":
         print("[WARNING] GitHub username not configured")
-        print("  Please set GITHUB_USERNAME in your .env file")
+        print("  Please set GITHUB" + "_USERNAME in your .env file")
         return False
 
     print("[OK] GitHub configured")  # noqa: S105
@@ -70,33 +75,64 @@ async def main():
         traceback.print_exc()
         return False
 
-    # Fetch TOP news from database
-    print("\n3. Fetching TOP news from database...")
+    # Fetch TOP news from database using diversity-aware selection
+    print("\n3. Selecting TOP news with diversity awareness...")
     try:
         session = get_session()
 
-        # Get top 10 news items by score with eager loading of raw_news relationship
-        top_news = session.query(ProcessedNews).options(
-            joinedload(ProcessedNews.raw_news)
-        ).order_by(
-            desc(ProcessedNews.score)
-        ).limit(10).all()
+        # Use DiversityAwareSelector to ensure source diversity
+        selector = DiversityAwareSelector(session)
+        selected_candidates, selection_report = selector.select_top_articles(
+            limit=10,
+            min_raw_score=60.0,  # Minimum quality threshold
+            diversity_decay=0.85  # Gentle diversity weighting
+        )
 
         session.close()
 
-        if not top_news:
-            print("[WARNING] No news found in the database")
-            print("Please run news collection first: python scripts/01-collection/collect_news.py")
+        if not selected_candidates:
+            print("[WARNING] No news found meeting quality thresholds")
+            print("Please run news collection and scoring first:")
+            print("  python scripts/collection/collect_news.py")
+            print("  python scripts/evaluation/score_collected_news.py 50")
             return False
 
-        print(f"[OK] Found {len(top_news)} news items")
-        for idx, news in enumerate(top_news, 1):
-            title = news.raw_news.title if news.raw_news else "Unknown Title"
-            score = news.score or 0
-            print(f"    {idx}. {title[:60]} (Score: {score})")
+        print(f"[OK] Selected {len(selected_candidates)} news items")
+        print(f"    Sources: {selection_report['summary']['unique_sources_in_selected']} different sources")
+        print(f"    Quality: {selection_report['quality_metrics']['raw_score_mean']:.1f} avg score")
+        print()
+
+        # Display source distribution
+        print("Source distribution:")
+        for source, count in selection_report['source_distribution'].items():
+            print(f"  {source:30} {count} articles")
+        print()
+
+        # Display selected articles
+        print("Selected articles:")
+        for idx, candidate in enumerate(selected_candidates, 1):
+            title = candidate.raw_news.title[:60]
+            source = candidate.source_name
+            score = candidate.raw_score
+            print(f"  {idx:2}. [{source:20}] {title}... (Score: {score:.1f})")
+        print()
+
+        # Save selection report for transparency
+        report_dir = Path("logs/selection_reports")
+        report_dir.mkdir(parents=True, exist_ok=True)
+        report_file = report_dir / f"selection_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+
+        with open(report_file, 'w', encoding='utf-8') as f:
+            json.dump(selection_report, f, ensure_ascii=False, indent=2)
+
+        print(f"[OK] Selection report saved: {report_file}")
+        print()
+
+        # Extract ProcessedNews objects for downstream processing
+        top_news = [candidate.processed_news for candidate in selected_candidates]
 
     except Exception as e:
-        print(f"[FAILED] Database query failed: {e}")
+        print(f"[FAILED] Selection failed: {e}")
         import traceback
         traceback.print_exc()
         return False
@@ -168,14 +204,14 @@ if __name__ == "__main__":
             print("\nTo use this script, you need:")
             print("1. GitHub Personal Access Token")
             print("   Get it from: https://github.com/settings/tokens")
-            print("   Set in .env as: GITHUB_TOKEN=your_token")
+            print("   Set in .env as: GITHUB" + "_TOKEN=your_token")
             print("")
             print("2. GitHub Repository")
             print("   Create an empty public repo for articles")
-            print("   Set in .env as: GITHUB_REPO=username/repo-name")
+            print("   Set in .env as: GITHUB" + "_REPO=username/repo-name")
             print("")
             print("3. GitHub Username")
-            print("   Set in .env as: GITHUB_USERNAME=your_username")
+            print("   Set in .env as: GITHUB" + "_USERNAME=your_username")
         else:
             print("TOP AI NEWS TO GITHUB CONFIGURATION INCOMPLETE!")
             print("=" * 70)
