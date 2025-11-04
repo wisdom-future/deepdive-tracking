@@ -89,6 +89,7 @@ def _init_db_cloud_sql(settings):
             pool_timeout=settings.database_pool_timeout,
             echo=settings.debug,
             pool_pre_ping=True,  # Test connections before using
+            connect_args={"scram_client_raw_response": True},
         )
         print("[DB] SQLAlchemy engine created successfully")
 
