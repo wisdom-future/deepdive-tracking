@@ -951,6 +951,16 @@ class GitHubPublisher:
         repo_path = Path(self.local_repo_path)
 
         try:
+            # 配置git用户信息（必须在commit之前）
+            await self._run_git_command(
+                ["git", "config", "user.email", "deepdive-tracking@bot.local"],
+                cwd=repo_path
+            )
+            await self._run_git_command(
+                ["git", "config", "user.name", "DeepDive Tracking Bot"],
+                cwd=repo_path
+            )
+
             # 添加文件
             if files:
                 for file in files:
