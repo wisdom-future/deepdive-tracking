@@ -358,12 +358,12 @@ def create_app() -> FastAPI:
                 data = [{
                     "id": str(p.id),
                     "raw_news_id": str(p.raw_news_id),
-                    "title": p.raw_news.title if p.raw_news else "Unknown",
-                    "score": p.score,
-                    "category": p.category,
-                    "summary_zh": p.summary_pro or p.summary_sci or "No summary available",
-                    "summary_en": (p.summary_pro_en or p.summary_sci_en) or "No English summary available",
-                    "confidence": p.confidence,
+                    "title": str(p.raw_news.title) if (p.raw_news and p.raw_news.title) else "Unknown",
+                    "score": float(p.score) if p.score is not None else 0.0,
+                    "category": str(p.category) if p.category else "unknown",
+                    "summary_zh": str(p.summary_pro or p.summary_sci or "No summary available"),
+                    "summary_en": str((p.summary_pro_en or p.summary_sci_en) or "No English summary available"),
+                    "confidence": float(p.confidence) if p.confidence is not None else 0.0,
                     "created_at": p.created_at.isoformat() if p.created_at else None
                 } for p in records]
 
