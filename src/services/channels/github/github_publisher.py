@@ -964,7 +964,17 @@ class GitHubPublisher:
             # 添加文件
             if files:
                 for file in files:
-                    await self._run_git_command(["git", "add", file], cwd=repo_path)
+                    # Convert absolute path to relative path from repo root
+                    file_path = Path(file)
+                    if file_path.is_absolute():
+                        try:
+                            relative_file = file_path.relative_to(repo_path)
+                            await self._run_git_command(["git", "add", str(relative_file)], cwd=repo_path)
+                        except ValueError:
+                            # File is outside repo, use as-is
+                            await self._run_git_command(["git", "add", file], cwd=repo_path)
+                    else:
+                        await self._run_git_command(["git", "add", file], cwd=repo_path)
             else:
                 await self._run_git_command(["git", "add", "-A"], cwd=repo_path)
 
