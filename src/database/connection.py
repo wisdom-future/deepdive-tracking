@@ -64,18 +64,37 @@ def _init_db_cloud_sql(settings):
         def getconn():
             """Get a connection from Cloud SQL Connector."""
             print("[DB] getconn() called - requesting connection from Cloud SQL Connector")
-            # Get credentials from environment variables (NOT hardcoded)
-            db_user = os.getenv("CLOUDSQL_USER", "deepdive_user")  # default user
-            db_auth = os.getenv("CLOUDSQL_PASSWORD", "")  # auth secret from env var only
+
+            # Use IAM authentication when available (best practice for Cloud Run)
+            # This avoids password synchronization issues
+            use_iam_auth = True
             db_name = os.getenv("CLOUDSQL_DATABASE", "deepdive_db")
 
-            print("[DB] Requesting connection from Cloud SQL Connector...")
-            # Cloud SQL Connector handles authentication, use provided password or empty string
+            # Try IAM auth first (no password needed, uses service account)
+            if use_iam_auth:
+                print("[DB] Using IAM authentication (no password needed)")
+                try:
+                    return connector.connect(
+                        "deepdive-engine:asia-east1:deepdive-db",
+                        "pg8000",
+                        user="deepdive_user",
+                        db=db_name,
+                        ip_type=ip_type,
+                        enable_iam_auth=True,  # Enable IAM authentication
+                    )
+                except Exception as e:
+                    print(f"[DB] IAM auth failed: {e}, falling back to password auth")
+
+            # Fallback to password authentication if IAM fails
+            db_user = os.getenv("CLOUDSQL_USER", "deepdive_user")
+            db_auth = os.getenv("CLOUDSQL_PASSWORD", "")
+
+            print("[DB] Using password authentication (fallback)")
             return connector.connect(
                 "deepdive-engine:asia-east1:deepdive-db",
                 "pg8000",
                 user=db_user,
-                password=db_auth if db_auth else "",  # Cloud SQL Connector handles auth
+                password=db_auth if db_auth else "",
                 db=db_name,
                 ip_type=ip_type,
             )
