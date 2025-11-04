@@ -43,7 +43,18 @@ class GitHubPublisher:
         self.github_token = github_token  # noqa: S105
         self.github_repo = github_repo
         self.github_username = github_username
-        self.local_repo_path = local_repo_path or f"/tmp/{github_repo.split('/')[-1]}"
+
+        # Ensure local_repo_path is absolute to avoid git add issues
+        if local_repo_path:
+            # Convert relative path to absolute
+            repo_path = Path(local_repo_path)
+            if not repo_path.is_absolute():
+                repo_path = Path.cwd() / repo_path
+                logger.info(f"Converted relative path to absolute: {local_repo_path} -> {repo_path}")
+            self.local_repo_path = str(repo_path.resolve())
+        else:
+            self.local_repo_path = f"/tmp/{github_repo.split('/')[-1]}"
+
         self.logger = logger
         self.articles_dir = "articles"
         self.index_file = "index.html"
@@ -84,10 +95,18 @@ class GitHubPublisher:
             # 初始化仓库
             await self._init_repo()
 
+            # [DEBUG] 打印关键路径信息
+            self.logger.info(f"[DEBUG] local_repo_path = {self.local_repo_path}")
+            self.logger.info(f"[DEBUG] local_repo_path type = {type(self.local_repo_path)}")
+            self.logger.info(f"[DEBUG] local_repo_path is_absolute = {Path(self.local_repo_path).is_absolute()}")
+
             # 生成文章文件名
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             filename = f"{article_id or timestamp}_{self._sanitize_filename(title)}.html"
             article_path = Path(self.local_repo_path) / self.articles_dir / filename
+
+            self.logger.info(f"[DEBUG] article_path = {article_path}")
+            self.logger.info(f"[DEBUG] article_path is_absolute = {article_path.is_absolute()}")
 
             # 确保目录存在
             article_path.parent.mkdir(parents=True, exist_ok=True)
@@ -112,9 +131,12 @@ class GitHubPublisher:
             await self._update_index()
 
             # 提交和推送
+            files_to_commit = [str(article_path), str(Path(self.local_repo_path) / self.index_file)]
+            self.logger.info(f"[DEBUG] files_to_commit = {files_to_commit}")
+
             commit_sha = await self._commit_and_push(
                 message=f"发布: {title[:50]}",
-                files=[str(article_path), str(Path(self.local_repo_path) / self.index_file)]
+                files=files_to_commit
             )
 
             # 生成URL
@@ -963,19 +985,31 @@ class GitHubPublisher:
 
             # 添加文件
             if files:
+                self.logger.info(f"[DEBUG] _commit_and_push: files parameter = {files}")
+                self.logger.info(f"[DEBUG] _commit_and_push: repo_path = {repo_path}")
+                self.logger.info(f"[DEBUG] _commit_and_push: repo_path is_absolute = {repo_path.is_absolute()}")
+
                 for file in files:
                     # Convert absolute path to relative path from repo root
                     file_path = Path(file)
+                    self.logger.info(f"[DEBUG] Processing file: {file}")
+                    self.logger.info(f"[DEBUG]   file_path = {file_path}")
+                    self.logger.info(f"[DEBUG]   file_path.is_absolute() = {file_path.is_absolute()}")
+
                     if file_path.is_absolute():
                         try:
                             relative_file = file_path.relative_to(repo_path)
+                            self.logger.info(f"[DEBUG]   Converted to relative: {relative_file}")
                             await self._run_git_command(["git", "add", str(relative_file)], cwd=repo_path)
-                        except ValueError:
+                        except ValueError as e:
                             # File is outside repo, use as-is
+                            self.logger.warning(f"[DEBUG]   Failed to convert to relative (ValueError: {e}), using as-is")
                             await self._run_git_command(["git", "add", file], cwd=repo_path)
                     else:
+                        self.logger.info(f"[DEBUG]   File is already relative, using as-is")
                         await self._run_git_command(["git", "add", file], cwd=repo_path)
             else:
+                self.logger.info("[DEBUG] No specific files, using git add -A")
                 await self._run_git_command(["git", "add", "-A"], cwd=repo_path)
 
             # 检查是否有更改
