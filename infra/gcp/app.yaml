@@ -10,8 +10,12 @@ env_variables:
   DEBUG: "False"
   LOG_LEVEL: "INFO"
 
-  # Database - Cloud SQL
-  DATABASE_URL: "postgresql://deepdive_user:deepdive_password@35.189.186.161:5432/deepdive_db"
+  # Database - Cloud SQL (using Cloud SQL Connector with environment variables)
+  DATABASE_URL: "postgresql+pg8000://@/deepdive-engine:asia-east1:deepdive-db/deepdive_db"
+  CLOUDSQL_USER: "${CLOUDSQL_USER}"
+  CLOUDSQL_PASSWORD: "${CLOUDSQL_PASSWORD}"
+  CLOUDSQL_DATABASE: "deepdive_db"
+  CLOUD_RUN: "true"
 
   # Redis Cache - Cloud Memorystore
   REDIS_URL: "redis://10.240.18.115:6379/0"
