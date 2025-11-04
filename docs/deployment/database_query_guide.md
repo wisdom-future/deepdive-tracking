@@ -6,7 +6,7 @@
 
 ### 方法1️⃣：在浏览器中直接查看 ✅（推荐）
 
-需要 Google 账户认证。在浏览器中访问以下 URL，系统会自动跳转到 Google 登录页面。
+**无需任何认证！直接在浏览器中访问以下 URL 即可：**
 
 **查看已处理的新闻（带评分和摘要）：**
 ```
@@ -18,12 +18,11 @@ https://deepdive-tracking-orp2dcdqua-de.a.run.app/data/news?table=processed&limi
 https://deepdive-tracking-orp2dcdqua-de.a.run.app/data/news?table=raw&limit=50&offset=0
 ```
 
-**使用授权的 Google 账户登录后即可查看数据**
-
-说明：
-- 系统会要求您使用 Google 账户登录
-- 只有具有 Cloud Run Invoker 权限的账户才能访问
-- 当前授权账户：`hello.junjie.duan@gmail.com`
+**使用说明：**
+- 复制上面的 URL 到浏览器地址栏
+- 按 Enter 即可看到 JSON 格式的数据
+- 支持所有现代浏览器
+- 完全公开访问，无需认证
 
 ---
 
