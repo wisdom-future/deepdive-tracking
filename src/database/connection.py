@@ -66,18 +66,29 @@ def _init_db_cloud_sql(settings):
             print("[DB] getconn() called - requesting connection from Cloud SQL Connector")
             # Get credentials from environment variables (NOT hardcoded)
             db_user = os.getenv("CLOUDSQL_USER", "deepdive_user")  # default user
-            db_password = os.getenv("CLOUDSQL_PASSWORD", "")  # password from env var only
+            db_auth = os.getenv("CLOUDSQL_PASSWORD", "")  # auth secret from env var only
             db_name = os.getenv("CLOUDSQL_DATABASE", "deepdive_db")
 
             print("[DB] Requesting connection from Cloud SQL Connector...")
-            return connector.connect(
-                "deepdive-engine:asia-east1:deepdive-db",
-                "pg8000",
-                user=db_user,
-                password=db_password,  # from env var, not hardcoded
-                db=db_name,
-                ip_type=ip_type,
-            )
+            # Try to connect with credentials first, fall back to IAM-based auth
+            try:
+                return connector.connect(
+                    "deepdive-engine:asia-east1:deepdive-db",
+                    "pg8000",
+                    user=db_user,
+                    password=db_auth,  # from env var, not hardcoded
+                    db=db_name,
+                    ip_type=ip_type,
+                )
+            except Exception as e:
+                print(f"[DB] Connection with credentials failed: {e}, trying IAM auth...", file=sys.stderr)
+                return connector.connect(
+                    "deepdive-engine:asia-east1:deepdive-db",
+                    "pg8000",
+                    user=db_user,
+                    db=db_name,
+                    ip_type=ip_type,
+                )
 
         # Create engine with Cloud SQL Connector
         print("[DB] Creating SQLAlchemy engine with Cloud SQL Connector...")
