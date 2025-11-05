@@ -67,26 +67,44 @@ def _init_db_cloud_sql(settings):
             print("[DB] getconn() called - requesting connection from Cloud SQL Connector")
             db_user = os.getenv("CLOUDSQL_USER", "deepdive_user")
             db_name = os.getenv("CLOUDSQL_DATABASE", "deepdive_db")
+            db_password = os.getenv("CLOUDSQL_PASSWORD", "")
             instance_connection_name = os.getenv(
                 "CLOUDSQL_INSTANCE",
                 "deepdive-engine:asia-east1:deepdive-db"
             )
 
+            # Check if we should use IAM authentication or password-based
+            use_iam_auth = os.getenv("CLOUDSQL_IAM_AUTH", "false").lower() == "true"
+
             print(f"[DB] Connecting to instance: {instance_connection_name}")
             print(f"[DB] Database: {db_name}, User: {db_user}")
-            print("[DB] Using Cloud SQL Connector with IAM authentication...")
-            # Use IAM authentication with Cloud SQL Connector
-            # IAM auth requires enable_iam_auth=True and password="" (empty string)
-            # Cloud SQL Connector handles authentication via service account credentials
-            return connector.connect(
-                instance_connection_name,
-                "pg8000",
-                user=db_user,
-                password="",  # Empty string required for IAM auth with pg8000
-                db=db_name,
-                ip_type=ip_type,
-                enable_iam_auth=True,  # Enable IAM authentication
-            )
+
+            if use_iam_auth:
+                print("[DB] Using Cloud SQL Connector with IAM authentication...")
+                # Use IAM authentication with Cloud SQL Connector
+                # IAM auth requires enable_iam_auth=True and password="" (empty string)
+                # Cloud SQL Connector handles authentication via service account credentials
+                return connector.connect(
+                    instance_connection_name,
+                    "pg8000",
+                    user=db_user,
+                    password="",  # Empty string required for IAM auth with pg8000
+                    db=db_name,
+                    ip_type=ip_type,
+                    enable_iam_auth=True,  # Enable IAM authentication
+                )
+            else:
+                print("[DB] Using Cloud SQL Connector with password authentication...")
+                # Use password-based authentication
+                return connector.connect(
+                    instance_connection_name,
+                    "pg8000",
+                    user=db_user,
+                    password=db_password,
+                    db=db_name,
+                    ip_type=ip_type,
+                    enable_iam_auth=False,  # Disable IAM authentication
+                )
 
         # Create engine with Cloud SQL Connector
         print("[DB] Creating SQLAlchemy engine with Cloud SQL Connector...")
