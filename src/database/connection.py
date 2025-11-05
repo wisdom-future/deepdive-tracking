@@ -66,7 +66,7 @@ def _init_db_cloud_sql(settings):
             """Get a connection from Cloud SQL Connector."""
             print("[DB] getconn() called - requesting connection from Cloud SQL Connector")
             db_user = os.getenv("CLOUDSQL_USER", "deepdive_user")
-            db_name = os.getenv("CLOUDSQL_DATABASE", "deepdive")
+            db_name = os.getenv("CLOUDSQL_DATABASE", "deepdive_db")
             db_password = os.getenv("CLOUDSQL_PASSWORD", "")
             instance_connection_name = os.getenv(
                 "CLOUDSQL_INSTANCE",
