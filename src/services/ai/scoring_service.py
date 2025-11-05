@@ -42,6 +42,7 @@ class ScoringService:
 
         # Select AI provider based on configuration
         self.provider = settings.ai_provider.lower()
+        self.logger = logger
 
         if self.provider == "grok":
             # Initialize Grok (xAI) client - uses OpenAI-compatible API
@@ -51,15 +52,15 @@ class ScoringService:
             )
             self.model = settings.xai_model
             self.provider_name = "grok"
-            self.logger.info(f"Initialized Grok scoring service with model {self.model}")
+            if self.logger:
+                self.logger.info(f"Initialized Grok scoring service with model {self.model}")
         else:
             # Default to OpenAI
             self.client = OpenAI(api_key=settings.openai_api_key)
             self.model = settings.openai_model
             self.provider_name = "openai"
-            self.logger.info(f"Initialized OpenAI scoring service with model {self.model}")
-
-        self.logger = logger
+            if self.logger:
+                self.logger.info(f"Initialized OpenAI scoring service with model {self.model}")
 
     async def score_news(self, raw_news: RawNews) -> FullScoringResult:
         """Score and classify a single news item.
