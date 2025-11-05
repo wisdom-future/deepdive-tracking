@@ -88,6 +88,15 @@ async def main():
             diversity_decay=0.85  # Gentle diversity weighting
         )
 
+        # Extract ProcessedNews objects BEFORE closing session
+        # (to avoid DetachedInstanceError when accessing relationships later)
+        top_news = [candidate.processed_news for candidate in selected_candidates]
+
+        # Eagerly load raw_news relationships to avoid detached instance errors
+        for news in top_news:
+            # Access the relationship while session is still open
+            _ = news.raw_news
+
         session.close()
 
         if not selected_candidates:
@@ -127,9 +136,6 @@ async def main():
 
         print(f"[OK] Selection report saved: {report_file}")
         print()
-
-        # Extract ProcessedNews objects for downstream processing
-        top_news = [candidate.processed_news for candidate in selected_candidates]
 
     except Exception as e:
         print(f"[FAILED] Selection failed: {e}")
