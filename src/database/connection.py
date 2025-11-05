@@ -48,7 +48,7 @@ def _init_db_cloud_sql(settings):
         from google.cloud.sql.connector import Connector, IPTypes
 
         print("[DB] Initializing Cloud SQL Connector for Cloud Run")
-        instance_name = os.getenv("CLOUDSQL_INSTANCE", "deepdive-engine:us-central1:deepdive-db")
+        instance_name = os.getenv("CLOUDSQL_INSTANCE", "deepdive-engine:asia-east1:deepdive-db")
         print(f"[DB] Connection string: {instance_name}")
         print(f"[DB] Database user: {os.getenv('CLOUDSQL_USER', 'deepdive_user')}")
 
@@ -70,7 +70,7 @@ def _init_db_cloud_sql(settings):
             db_password = os.getenv("CLOUDSQL_PASSWORD", "")
             instance_connection_name = os.getenv(
                 "CLOUDSQL_INSTANCE",
-                "deepdive-engine:us-central1:deepdive-db"
+                "deepdive-engine:asia-east1:deepdive-db"
             )
 
             print(f"[DB] Connecting to instance: {instance_connection_name}")
