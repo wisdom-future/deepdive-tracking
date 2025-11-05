@@ -48,6 +48,14 @@ class Settings(BaseSettings):
     openai_temperature: float = 0.3
     openai_max_tokens: int = 1000
 
+    # External APIs - Grok (xAI)
+    xai_api_key: Optional[str] = None
+    xai_model: str = "grok-beta"
+    xai_base_url: str = "https://api.x.ai/v1"
+
+    # AI Provider Selection: "openai" or "grok"
+    ai_provider: str = "grok"  # Default to Grok to avoid OpenAI bias
+
     # Web Crawling
     request_timeout: int = 30
     max_concurrent_requests: int = 10

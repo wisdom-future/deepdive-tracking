@@ -65,9 +65,9 @@ async def main():
         print()
 
         # [2] 初始化评分服务
-        print("[2] 初始化 OpenAI 评分服务...")
+        print(f"[2] 初始化 AI 评分服务 (Provider: {settings.ai_provider})...")
         service = ScoringService(settings, session)
-        print("    OK - 服务就绪")
+        print(f"    OK - {settings.ai_provider.upper()} 服务就绪，Model: {service.model}")
         print()
 
         # [3] 开始评分

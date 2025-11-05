@@ -34,13 +34,31 @@ class ScoringService:
         """Initialize scoring service.
 
         Args:
-            settings: Application settings containing OpenAI config
+            settings: Application settings containing AI provider config
             db_session: SQLAlchemy session for database operations
         """
         self.settings = settings
         self.db_session = db_session
-        self.client = OpenAI(api_key=settings.openai_api_key)
-        self.model = settings.openai_model
+
+        # Select AI provider based on configuration
+        self.provider = settings.ai_provider.lower()
+
+        if self.provider == "grok":
+            # Initialize Grok (xAI) client - uses OpenAI-compatible API
+            self.client = OpenAI(
+                api_key=settings.xai_api_key,
+                base_url=settings.xai_base_url
+            )
+            self.model = settings.xai_model
+            self.provider_name = "grok"
+            self.logger.info(f"Initialized Grok scoring service with model {self.model}")
+        else:
+            # Default to OpenAI
+            self.client = OpenAI(api_key=settings.openai_api_key)
+            self.model = settings.openai_model
+            self.provider_name = "openai"
+            self.logger.info(f"Initialized OpenAI scoring service with model {self.model}")
+
         self.logger = logger
 
     async def score_news(self, raw_news: RawNews) -> FullScoringResult:
@@ -231,7 +249,7 @@ class ScoringService:
             # Log cost
             cost_log = CostLog(
                 processed_news_id=processed_news.id,
-                service="openai",
+                service=self.provider_name,  # Use dynamic provider name (openai or grok)
                 operation="scoring_and_summarization",
                 model=self.model,
                 total_cost=scoring_result.metadata.cost,
