@@ -74,13 +74,15 @@ def _init_db_cloud_sql(settings):
 
             print(f"[DB] Connecting to instance: {instance_connection_name}")
             print(f"[DB] Database: {db_name}, User: {db_user}")
-            print("[DB] Using Cloud SQL Connector with IAM authentication (no password required)...")
-            # Use IAM authentication - no password needed
-            # Cloud SQL Connector automatically uses the service account's IAM credentials
+            print("[DB] Using Cloud SQL Connector with IAM authentication...")
+            # Use IAM authentication with Cloud SQL Connector
+            # IAM auth requires enable_iam_auth=True and password="" (empty string)
+            # Cloud SQL Connector handles authentication via service account credentials
             return connector.connect(
                 instance_connection_name,
                 "pg8000",
                 user=db_user,
+                password="",  # Empty string required for IAM auth with pg8000
                 db=db_name,
                 ip_type=ip_type,
                 enable_iam_auth=True,  # Enable IAM authentication
