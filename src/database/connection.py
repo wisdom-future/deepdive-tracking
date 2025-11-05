@@ -48,8 +48,9 @@ def _init_db_cloud_sql(settings):
         from google.cloud.sql.connector import Connector, IPTypes
 
         print("[DB] Initializing Cloud SQL Connector for Cloud Run")
-        print(f"[DB] Connection string: deepdive-engine:asia-east1:deepdive-db")
-        print(f"[DB] Database user: deepdive_user")
+        instance_name = os.getenv("CLOUDSQL_INSTANCE", "deepdive-engine:us-central1:deepdive-db")
+        print(f"[DB] Connection string: {instance_name}")
+        print(f"[DB] Database user: {os.getenv('CLOUDSQL_USER', 'deepdive_user')}")
 
         # Determine IP type: Use PUBLIC by default since Cloud SQL may not have private IP configured
         # This is safer and works for most Cloud Run setups
@@ -65,14 +66,20 @@ def _init_db_cloud_sql(settings):
             """Get a connection from Cloud SQL Connector."""
             print("[DB] getconn() called - requesting connection from Cloud SQL Connector")
             db_user = os.getenv("CLOUDSQL_USER", "deepdive_user")
-            db_name = os.getenv("CLOUDSQL_DATABASE", "deepdive_db")
+            db_name = os.getenv("CLOUDSQL_DATABASE", "deepdive")
             db_password = os.getenv("CLOUDSQL_PASSWORD", "")
+            instance_connection_name = os.getenv(
+                "CLOUDSQL_INSTANCE",
+                "deepdive-engine:us-central1:deepdive-db"
+            )
 
+            print(f"[DB] Connecting to instance: {instance_connection_name}")
+            print(f"[DB] Database: {db_name}, User: {db_user}")
             print("[DB] Requesting connection from Cloud SQL Connector (proxy auth)...")
             # Cloud SQL Connector handles authentication via GCP IAM proxy
             # However, pg8000 driver still requires a password parameter (can be empty string)
             return connector.connect(
-                "deepdive-engine:asia-east1:deepdive-db",
+                instance_connection_name,
                 "pg8000",
                 user=db_user,
                 password=db_password,
