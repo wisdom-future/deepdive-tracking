@@ -34,13 +34,13 @@ class Settings(BaseSettings):
     database_max_overflow: int = 20
     database_pool_timeout: int = 30
 
-    # Redis Cache
-    redis_url: str = "redis://localhost:6379/0"
-    redis_cache_ttl: int = 3600
+    # Redis Cache (REMOVED - not used, disabled to reduce costs)
+    # redis_url: str = "redis://localhost:6379/0"
+    # redis_cache_ttl: int = 3600
 
-    # Celery
-    celery_broker_url: str = "redis://localhost:6379/1"
-    celery_result_backend: str = "redis://localhost:6379/2"
+    # Celery (REMOVED - not used, disabled to reduce costs)
+    # celery_broker_url: str = "redis://localhost:6379/1"
+    # celery_result_backend: str = "redis://localhost:6379/2"
 
     # External APIs - OpenAI
     openai_api_key: Optional[str] = None
