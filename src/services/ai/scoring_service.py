@@ -44,6 +44,8 @@ class ScoringService:
         self.provider = settings.ai_provider.lower()
         self.logger = logger
 
+        # Initialize BOTH providers for automatic fallback
+        # Primary provider (Grok or OpenAI)
         if self.provider == "grok":
             # Initialize Grok (xAI) client - uses OpenAI-compatible API
             self.client = OpenAI(
@@ -52,13 +54,24 @@ class ScoringService:
             )
             self.model = settings.xai_model
             self.provider_name = "grok"
+
+            # Initialize OpenAI as fallback
+            self.fallback_client = OpenAI(api_key=settings.openai_api_key)
+            self.fallback_model = settings.openai_model
+            self.fallback_provider_name = "openai"
+
             if self.logger:
                 self.logger.info(f"Initialized Grok scoring service with model {self.model}")
+                self.logger.info(f"OpenAI fallback available with model {self.fallback_model}")
         else:
-            # Default to OpenAI
+            # Default to OpenAI (no fallback needed)
             self.client = OpenAI(api_key=settings.openai_api_key)
             self.model = settings.openai_model
             self.provider_name = "openai"
+            self.fallback_client = None
+            self.fallback_model = None
+            self.fallback_provider_name = None
+
             if self.logger:
                 self.logger.info(f"Initialized OpenAI scoring service with model {self.model}")
 
@@ -277,7 +290,7 @@ class ScoringService:
     # Private methods
 
     async def _call_scoring_api(self, raw_news: RawNews) -> Tuple[ScoringResponse, float]:
-        """Call OpenAI API for scoring and classification.
+        """Call AI API for scoring and classification with automatic fallback.
 
         Args:
             raw_news: Raw news to score
@@ -287,6 +300,7 @@ class ScoringService:
         """
         prompt = get_scoring_prompt(raw_news.title, raw_news.content or "")
 
+        # Try primary provider first
         try:
             response = self.client.chat.completions.create(
                 model=self.model,
@@ -320,6 +334,43 @@ class ScoringService:
 
             scoring = ScoringResponse(**response_json)
             return scoring, cost
+
+        except (APIError, APIConnectionError, RateLimitError) as e:
+            error_msg = str(e)
+            self.logger.warning(f"{self.provider_name} API error: {error_msg}")
+
+            # Try fallback to OpenAI if available
+            if self.fallback_client:
+                self.logger.warning(f"Attempting fallback to {self.fallback_provider_name}...")
+                try:
+                    response = self.fallback_client.chat.completions.create(
+                        model=self.fallback_model,
+                        messages=[
+                            {"role": "system", "content": SCORING_SYSTEM_PROMPT},
+                            {"role": "user", "content": prompt},
+                        ],
+                        temperature=0.7,
+                        max_tokens=1000,
+                    )
+
+                    response_text = response.choices[0].message.content
+                    response_text = strip_markdown_code_blocks(response_text)
+                    response_json = json.loads(response_text)
+
+                    input_tokens = response.usage.prompt_tokens
+                    output_tokens = response.usage.completion_tokens
+                    cost = (input_tokens * 0.000005 + output_tokens * 0.000015)
+
+                    scoring = ScoringResponse(**response_json)
+                    self.logger.info(f"✅ Fallback to {self.fallback_provider_name} successful")
+                    return scoring, cost
+
+                except Exception as fallback_error:
+                    self.logger.error(f"Fallback to {self.fallback_provider_name} also failed: {str(fallback_error)}")
+                    raise ValueError(f"Both {self.provider_name} and {self.fallback_provider_name} failed") from fallback_error
+            else:
+                # No fallback available
+                raise ValueError(f"{self.provider_name} API error: {error_msg}") from e
 
         except json.JSONDecodeError as e:
             self.logger.error(f"Invalid JSON in API response: {str(e)}")
