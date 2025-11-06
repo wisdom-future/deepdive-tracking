@@ -71,8 +71,9 @@ def load_gcp_secrets_to_env(project_id: Optional[str] = None):
         "wechat-app-id": "WECHAT_APP_ID",
         "wechat-app-secret": "WECHAT_APP_SECRET",
 
-        # OpenAI
+        # AI APIs
         "openai-api-key": "OPENAI_API_KEY",
+        "grok-api-key": "XAI_API_KEY",
     }
 
     logger.info("Loading secrets from GCP Secret Manager...")
