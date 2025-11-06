@@ -50,7 +50,7 @@ class Settings(BaseSettings):
 
     # External APIs - Grok (xAI)
     xai_api_key: Optional[str] = None
-    xai_model: str = "grok-beta"
+    xai_model: str = "grok-3"
     xai_base_url: str = "https://api.x.ai/v1"
 
     # AI Provider Selection: "openai" or "grok"
