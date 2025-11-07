@@ -8,7 +8,7 @@ from fastapi import APIRouter, HTTPException, status
 from alembic.config import Config
 from alembic import command
 
-from src.database import get_engine
+from src.database import engine as db_engine
 
 router = APIRouter(prefix="/migrations", tags=["migrations"])
 
@@ -41,11 +41,8 @@ async def upgrade_database() -> Dict[str, Any]:
         alembic_cfg = Config(str(project_root / "alembic.ini"))
         alembic_cfg.set_main_option("script_location", str(project_root / "alembic"))
 
-        # Get database engine
-        engine = get_engine()
-
-        # Run migrations
-        with engine.connect() as connection:
+        # Run migrations using database engine
+        with db_engine.connect() as connection:
             alembic_cfg.attributes["connection"] = connection
 
             logger.info("Running migrations...")
@@ -80,9 +77,7 @@ async def get_current_version() -> Dict[str, Any]:
     try:
         from alembic.runtime.migration import MigrationContext
 
-        engine = get_engine()
-
-        with engine.connect() as connection:
+        with db_engine.connect() as connection:
             context = MigrationContext.configure(connection)
             current_rev = context.get_current_revision()
 

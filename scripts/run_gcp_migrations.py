@@ -17,7 +17,7 @@ sys.path.insert(0, str(project_root))
 
 from alembic.config import Config
 from alembic import command
-from src.database import get_engine
+from src.database import engine
 
 
 def run_migrations():
@@ -26,10 +26,6 @@ def run_migrations():
     print("Running database migrations on GCP Cloud SQL")
     print("=" * 80)
     print()
-
-    # Get database engine from the application's database module
-    # This handles Cloud SQL connector setup automatically
-    engine = get_engine()
 
     print(f"✓ Connected to database")
     print()
