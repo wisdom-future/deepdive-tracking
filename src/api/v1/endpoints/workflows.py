@@ -116,23 +116,29 @@ def run_workflow_script(workflow_type: str) -> Dict[str, Any]:
 async def trigger_daily_workflow(background_tasks: BackgroundTasks) -> Dict[str, Any]:
     """Trigger the daily news workflow.
 
-    This endpoint is called by Cloud Scheduler every day at 9:00 AM Beijing Time.
+    This endpoint is called by Cloud Scheduler every day at 8:00 AM Beijing Time.
 
     Workflow steps:
     1. Data Collection - Collect latest AI news from all sources
-    2. AI Scoring - Score collected news with OpenAI
+    2. AI Scoring - Score collected news with OpenAI (parallel processing)
     3. Email Publishing - Send top news to subscribers
     4. GitHub Publishing - Publish to GitHub Pages
 
     Returns:
-        Dict with workflow execution status
+        Dict with workflow execution status (immediate response, workflow runs in background)
     """
     logger.info("Daily workflow triggered via Cloud Scheduler")
 
-    # Run workflow synchronously for Cloud Scheduler (it needs the response)
-    result = run_workflow_script("daily")
+    # Run workflow as background task to avoid Cloud Scheduler timeout
+    # Cloud Scheduler expects response within 30 seconds, but workflow takes 20 minutes
+    background_tasks.add_task(run_workflow_script, "daily")
 
-    return result
+    return {
+        "status": "started",
+        "workflow_type": "daily",
+        "message": "Daily workflow started in background",
+        "timestamp": datetime.now().isoformat()
+    }
 
 
 @router.post(
@@ -148,20 +154,25 @@ async def trigger_weekly_workflow(background_tasks: BackgroundTasks) -> Dict[str
 
     Workflow steps:
     1. Data Collection - Collect latest AI news from all sources
-    2. AI Scoring - Score collected news with OpenAI
+    2. AI Scoring - Score collected news with OpenAI (parallel processing)
     3. Weekly Report - Generate weekly digest and analysis
     4. Email Publishing - Send weekly report to subscribers
     5. GitHub Publishing - Publish to GitHub Pages
 
     Returns:
-        Dict with workflow execution status
+        Dict with workflow execution status (immediate response, workflow runs in background)
     """
     logger.info("Weekly workflow triggered via Cloud Scheduler")
 
-    # Run workflow synchronously for Cloud Scheduler (it needs the response)
-    result = run_workflow_script("weekly")
+    # Run workflow as background task to avoid Cloud Scheduler timeout
+    background_tasks.add_task(run_workflow_script, "weekly")
 
-    return result
+    return {
+        "status": "started",
+        "workflow_type": "weekly",
+        "message": "Weekly workflow started in background",
+        "timestamp": datetime.now().isoformat()
+    }
 
 
 @router.get(
