@@ -325,14 +325,13 @@ async def main():
         print(f"  Time threshold: {time_threshold.strftime('%Y-%m-%d %H:%M:%S')}")
 
         # Query TOP news from last 24 hours
-        # Join with RawNews to filter by published_at and collected_at
+        # Join with RawNews to filter by created_at
         top_news = session.query(ProcessedNews).join(
             RawNews, ProcessedNews.raw_news_id == RawNews.id
         ).filter(
             and_(
-                # Either published_at or collected_at within last 24 hours
-                # (some sources may not have accurate published_at)
-                RawNews.collected_at >= time_threshold,
+                # Filter by created_at (when the news was added to our system)
+                RawNews.created_at >= time_threshold,
                 ProcessedNews.score.isnot(None)
             )
         ).options(
