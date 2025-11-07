@@ -9,9 +9,9 @@ echo "DeepDive Tracking - Cloud Scheduler Setup"
 echo "=================================================="
 
 # Configuration
-PROJECT_ID="${GOOGLE_CLOUD_PROJECT:-deepdive-tracking}"
+PROJECT_ID="${GOOGLE_CLOUD_PROJECT:-deepdive-engine}"
 REGION="asia-east1"
-SERVICE_URL="https://deepdive-tracking-orp2dcdqua-de.a.run.app"
+SERVICE_URL="https://deepdive-tracking-726493701291.asia-east1.run.app"
 SERVICE_ACCOUNT="deepdive-scheduler@${PROJECT_ID}.iam.gserviceaccount.com"
 
 # Colors
@@ -118,7 +118,7 @@ gcloud scheduler jobs create http $JOB_NAME_WEEKLY \
     --http-method=POST \
     --oidc-service-account-email=$SERVICE_ACCOUNT \
     --oidc-token-audience=$SERVICE_URL \
-    --attempt-deadline=45m \
+    --attempt-deadline=30m \
     --project=$PROJECT_ID
 
 echo -e "${GREEN}✓${NC} Weekly job created: $JOB_NAME_WEEKLY"

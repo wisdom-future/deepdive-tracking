@@ -49,6 +49,12 @@ def run_workflow_script(workflow_type: str) -> Dict[str, Any]:
 
         logger.info(f"Workflow exit code: {result.returncode}")
 
+        # Log subprocess output for debugging
+        if result.stdout:
+            logger.info(f"Workflow stdout:\n{result.stdout}")
+        if result.stderr:
+            logger.warning(f"Workflow stderr:\n{result.stderr}")
+
         # Check if there's a results JSON file
         logs_dir = project_root / "logs"
         workflow_result = None
