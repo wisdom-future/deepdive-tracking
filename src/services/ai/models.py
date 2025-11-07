@@ -99,22 +99,22 @@ class SummaryResponse(BaseModel):
 
     summary_pro: str = Field(
         min_length=100,
-        max_length=1000,
+        max_length=3000,
         description="Professional summary for tech decision makers (Chinese)"
     )
     summary_sci: str = Field(
         min_length=100,
-        max_length=1000,
+        max_length=3000,
         description="Scientific summary for general audience (Chinese)"
     )
     summary_pro_en: str = Field(
         min_length=100,
-        max_length=1000,
+        max_length=3000,
         description="Professional summary for tech decision makers (English)"
     )
     summary_sci_en: str = Field(
         min_length=100,
-        max_length=1000,
+        max_length=3000,
         description="Scientific summary for general audience (English)"
     )
 
