@@ -43,7 +43,7 @@ def run_workflow_script(workflow_type: str) -> Dict[str, Any]:
             ["python", str(workflow_script)],
             capture_output=True,
             text=True,
-            timeout=900,  # 15 minutes
+            timeout=1800,  # 30 minutes (评分步骤需要20分钟)
             cwd=str(project_root)
         )
 
@@ -90,11 +90,11 @@ def run_workflow_script(workflow_type: str) -> Dict[str, Any]:
             }
 
     except subprocess.TimeoutExpired:
-        logger.error(f"{workflow_type.capitalize()} workflow timeout (15 minutes)")
+        logger.error(f"{workflow_type.capitalize()} workflow timeout (30 minutes)")
         return {
             "status": "timeout",
             "workflow_type": workflow_type,
-            "message": f"{workflow_type.capitalize()} workflow timeout after 15 minutes",
+            "message": f"{workflow_type.capitalize()} workflow timeout after 30 minutes",
             "timestamp": datetime.now().isoformat()
         }
     except Exception as e:

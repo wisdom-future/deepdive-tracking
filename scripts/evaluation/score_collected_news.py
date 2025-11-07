@@ -70,8 +70,8 @@ async def main():
         print(f"    OK - {settings.ai_provider.upper()} 服务就绪，Model: {service.model}")
         print()
 
-        # [3] 开始评分
-        print("[3] 开始评分...")
+        # [3] 开始评分 (并行处理)
+        print("[3] 开始评分 (并行处理，10个并发)...")
         print(f"    时间: {datetime.now().isoformat()}")
         print()
 
@@ -79,7 +79,9 @@ async def main():
         failed_count = 0
         total_cost = 0.0
 
-        for idx, article in enumerate(unscored, 1):
+        # 并行处理函数
+        async def process_article(idx, article):
+            """处理单篇文章"""
             try:
                 # 显示进度
                 title_preview = article.title[:40] + "..." if len(article.title) > 40 else article.title
@@ -90,25 +92,41 @@ async def main():
 
                 # 提取字段 (使用正确的嵌套结构)
                 score = result.scoring.score
-                category = result.scoring.category.value if result.scoring.category else "unknown"
-                sub_categories = result.scoring.sub_categories if result.scoring.sub_categories else []
-                summary_pro = result.summaries.summary_pro
-                summary_sci = result.summaries.summary_sci
-                keywords = result.scoring.keywords if result.scoring.keywords else []
                 cost = result.metadata.cost
 
                 # 保存到数据库 (调用服务的保存方法)
                 await service.save_to_database(article, result)
 
-                scored_count += 1
-                total_cost += cost
-
-                print(f"           分数: {score}/100, 成本: ${cost:.4f}")
+                print(f"           ✓ 分数: {score}/100, 成本: ${cost:.4f}")
+                return {"status": "success", "cost": cost}
 
             except Exception as e:
-                failed_count += 1
                 error_msg = str(e)[:50]
-                print(f"           [ERROR] {error_msg}")
+                print(f"           ✗ [ERROR] {error_msg}")
+                return {"status": "failed", "error": str(e)}
+
+        # 使用信号量控制并发数
+        semaphore = asyncio.Semaphore(10)  # 最多10个并发
+
+        async def process_with_limit(idx, article):
+            """使用信号量限制并发"""
+            async with semaphore:
+                return await process_article(idx, article)
+
+        # 并行处理所有文章
+        tasks = [process_with_limit(idx, article) for idx, article in enumerate(unscored, 1)]
+        results = await asyncio.gather(*tasks, return_exceptions=True)
+
+        # 统计结果
+        for result in results:
+            if isinstance(result, Exception):
+                failed_count += 1
+            elif isinstance(result, dict):
+                if result["status"] == "success":
+                    scored_count += 1
+                    total_cost += result["cost"]
+                else:
+                    failed_count += 1
 
         print()
         print("=" * 80)

@@ -71,7 +71,7 @@ class DailyWorkflow:
                 shell=True,
                 capture_output=True,
                 text=True,
-                timeout=600,  # 10 分钟超时
+                timeout=1200,  # 20 分钟超时 (评分200篇需要更多时间)
                 env=os.environ.copy()  # Pass environment variables to subprocess
             )
 
@@ -96,7 +96,7 @@ class DailyWorkflow:
                 return False
 
         except subprocess.TimeoutExpired:
-            error_msg = f"{step_name} 超时（10 分钟）"
+            error_msg = f"{step_name} 超时（20 分钟）"
             print(f"[FAILED] {error_msg}")
             self.results["errors"].append(error_msg)
             return False
