@@ -51,13 +51,14 @@ def format_publish_date(dt) -> str:
 
 def generate_bilingual_email_html(news_items: list, date_str: str) -> str:
     """
-    Generate clean, mobile-friendly HTML email with bilingual summaries
+    Generate professional, mobile-friendly HTML email with bilingual summaries
+    Based on ai_news_digest.html template design
 
     设计原则 (Design Principles):
     1. 移动优先 (Mobile-first): 充足的padding和触摸目标大小
     2. 可读性 (Readability): 清晰的层级结构和视觉分隔
     3. 双语支持 (Bilingual): 中英文摘要分别独立显示
-    4. 专业性 (Professional): 现代化设计,支持所有主流邮件客户端
+    4. 专业性 (Professional): 紫色渐变品牌配色,支持所有主流邮件客户端
     """
 
     news_items_html = []
@@ -68,13 +69,13 @@ def generate_bilingual_email_html(news_items: list, date_str: str) -> str:
 
         # Get Chinese summary
         summary_zh = news.summary_pro or news.summary_sci or "暂无中文摘要"
-        summary_zh = get_summary_with_limit(summary_zh, 150)
+        summary_zh = get_summary_with_limit(summary_zh, 200)
 
         # Get English summary with proper fallback
         summary_en = news.summary_pro_en or news.summary_sci_en
         if not summary_en or len(summary_en.strip()) < 20:
             summary_en = "(English summary not available)"
-        summary_en = get_summary_with_limit(summary_en, 150)
+        summary_en = get_summary_with_limit(summary_en, 200)
 
         score = news.score or 0
         source_url = news.raw_news.url or "https://deepdive-tracking.github.io"
@@ -82,73 +83,86 @@ def generate_bilingual_email_html(news_items: list, date_str: str) -> str:
         category = news.category or "AI News"
         published_date = format_publish_date(news.raw_news.published_at)
 
-        # Score color
-        if score >= 80:
-            color = "#10b981"  # Green
-        elif score >= 60:
-            color = "#3b82f6"  # Blue
-        elif score >= 40:
-            color = "#f59e0b"  # Orange
-        else:
-            color = "#ef4444"  # Red
+        # Category emoji mapping
+        category_icon = "🚀"
+        if "公司动态" in category or "Company" in category:
+            category_icon = "🏢"
+        elif "技术突破" in category or "Technology" in category:
+            category_icon = "🚀"
+        elif "投资" in category or "Investment" in category:
+            category_icon = "💰"
+        elif "研究" in category or "Research" in category:
+            category_icon = "📊"
 
-        # Enhanced mobile-friendly layout with proper padding
+        # Modern card-based layout with gradient score badge
         item_html = f"""
-<table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin-bottom:30px;">
+<!-- News Item {idx} -->
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:20px;border:1px solid #e9ecef;border-radius:8px;overflow:hidden;">
   <tr>
-    <td style="border-left:5px solid {color};background:#ffffff;padding:25px;border-radius:8px;box-shadow:0 2px 4px rgba(0,0,0,0.05);">
+    <td style="padding:25px 20px;">
       <!-- Title and Score Row -->
-      <table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin-bottom:18px;">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
         <tr>
-          <td style="font-size:18px;font-weight:700;color:#1f2937;line-height:1.5;padding-right:15px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;">
-            {idx}. {news.raw_news.title}
+          <td style="width:80%;vertical-align:top;">
+            <div style="font-size:12px;color:#667eea;font-weight:600;margin-bottom:8px;">TOP {idx}</div>
+            <div style="font-size:20px;font-weight:600;color:#212529;line-height:1.4;margin-bottom:15px;">
+              {news.raw_news.title}
+            </div>
           </td>
-          <td align="right" valign="top" style="background:{color};color:white;padding:8px 16px;border-radius:6px;font-size:15px;font-weight:700;white-space:nowrap;min-width:60px;">
-            {int(score)}
+          <td style="width:20%;text-align:right;vertical-align:top;">
+            <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="right">
+              <tr>
+                <td style="background:linear-gradient(135deg, #667eea 0%, #764ba2 100%);background-color:#667eea;color:#ffffff;font-size:24px;font-weight:700;width:70px;height:70px;border-radius:8px;text-align:center;vertical-align:middle;">
+                  {int(score)}
+                </td>
+              </tr>
+            </table>
           </td>
         </tr>
       </table>
 
-      <!-- Publish Date and Metadata -->
-      <table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin-bottom:18px;">
+      <!-- Metadata Tags -->
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:15px 0;padding:15px 0;border-top:1px solid #f1f3f5;border-bottom:1px solid #f1f3f5;">
         <tr>
-          <td style="font-size:13px;color:#6b7280;padding-right:20px;">
-            📅 发布时间: {published_date}
-          </td>
-          <td style="font-size:13px;color:#6b7280;padding-right:20px;">
-            📂 {category}
-          </td>
-          <td style="font-size:13px;color:#6b7280;">
-            ✍️ {author}
+          <td style="font-size:12px;color:#6c757d;line-height:1.8;">
+            {category_icon} {category} &nbsp;&nbsp;|&nbsp;&nbsp; 📰 {author} &nbsp;&nbsp;|&nbsp;&nbsp; 🕐 {published_date}
           </td>
         </tr>
       </table>
 
-      <!-- Summary Section - Chinese -->
-      <table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin-bottom:18px;background:#f8fafc;padding:18px;border-radius:6px;">
+      <!-- Chinese Summary -->
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:12px;">
         <tr>
-          <td style="color:#334155;font-size:14px;line-height:1.7;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;">
-            <p style="margin:0 0 10px 0;font-weight:600;color:#0f172a;"><strong>📌 中文摘要:</strong></p>
-            <p style="margin:0;color:#475569;">{summary_zh}</p>
+          <td style="background-color:#f8f9fa;border-left:4px solid #667eea;padding:15px 18px;border-radius:4px;">
+            <div style="font-size:13px;font-weight:600;color:#495057;margin-bottom:8px;">
+              🇨🇳 中文摘要
+            </div>
+            <div style="font-size:14px;color:#6c757d;line-height:1.7;">
+              {summary_zh}
+            </div>
           </td>
         </tr>
       </table>
 
-      <!-- Summary Section - English -->
-      <table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin-bottom:20px;background:#f0f9ff;padding:18px;border-radius:6px;">
+      <!-- English Summary -->
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:15px;">
         <tr>
-          <td style="color:#1e3a8a;font-size:14px;line-height:1.7;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;">
-            <p style="margin:0 0 10px 0;font-weight:600;color:#1e40af;"><strong>📄 English Summary:</strong></p>
-            <p style="margin:0;color:#1e40af;">{summary_en}</p>
+          <td style="background-color:#f8f9fa;border-left:4px solid #28a745;padding:15px 18px;border-radius:4px;">
+            <div style="font-size:13px;font-weight:600;color:#495057;margin-bottom:8px;">
+              🇬🇧 English Summary
+            </div>
+            <div style="font-size:14px;color:#6c757d;line-height:1.7;">
+              {summary_en}
+            </div>
           </td>
         </tr>
       </table>
 
-      <!-- Read More Link -->
-      <table width="100%" border="0" cellspacing="0" cellpadding="0">
+      <!-- Read More Button -->
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0">
         <tr>
-          <td align="center" style="padding:15px 0 0 0;">
-            <a href="{source_url}" target="_blank" style="display:inline-block;background:{color};color:white;padding:12px 30px;border-radius:6px;text-decoration:none;font-weight:600;font-size:14px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;">
+          <td style="border-radius:6px;background:linear-gradient(135deg, #667eea 0%, #764ba2 100%);background-color:#667eea;">
+            <a href="{source_url}" target="_blank" style="display:inline-block;padding:12px 28px;font-size:14px;color:#ffffff;text-decoration:none;font-weight:500;">
               阅读原文 / Read Full Article →
             </a>
           </td>
@@ -165,97 +179,136 @@ def generate_bilingual_email_html(news_items: list, date_str: str) -> str:
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="x-apple-disable-message-reformatting">
     <meta name="format-detection" content="telephone=no,date=no,address=no,email=no">
-    <title>AI News Digest - {date_str}</title>
-    <style>
-        * {{
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }}
-
-        body {{
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, 'Noto Sans SC', 'Microsoft YaHei', sans-serif;
-            line-height: 1.6;
-            color: #1f2937;
-            background: #f3f4f6;
-            padding: 0;
-            margin: 0;
-            min-height: 100vh;
-        }}
-
-        /* Mobile optimization */
-        @media (max-width: 600px) {{
-            body {{
-                padding: 0 !important;
-            }}
-
-            table[width="600"] {{
-                width: 100% !important;
-                min-width: 320px !important;
-            }}
-
-            td {{
-                padding: 15px !important;
-            }}
-
-            h1 {{
-                font-size: 22px !important;
-            }}
-
-            p {{
-                font-size: 14px !important;
-            }}
-        }}
-
-        /* Dark mode support */
-        @media (prefers-color-scheme: dark) {{
-            body {{
-                background: #1f2937 !important;
-            }}
-        }}
+    <title>AI News Daily Digest - {date_str}</title>
+    <!--[if mso]>
+    <style type="text/css">
+        body, table, td {{font-family: Arial, sans-serif !important;}}
     </style>
+    <![endif]-->
 </head>
-<body>
-    <div style="width:100%;background:#f3f4f6;padding:20px 10px;">
-        <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background:#f3f4f6;">
-            <tr>
-                <td align="center" style="padding:0;">
-                    <table width="600" border="0" cellspacing="0" cellpadding="0" style="max-width:100%;background:#ffffff;border-collapse:collapse;border-radius:12px;overflow:hidden;box-shadow:0 4px 6px rgba(0,0,0,0.1);">
-                        <!-- Header -->
-                        <tr>
-                            <td style="background:linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);color:white;padding:40px 30px;text-align:center;">
-                                <h1 style="font-size:28px;font-weight:800;margin:0 0 15px 0;line-height:1.3;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;">📰 AI News Daily Digest</h1>
-                                <p style="font-size:15px;opacity:0.95;margin:0;line-height:1.5;font-weight:500;">
-                                    发布时间: {date_str} | 共 {len(news_items)} 条精选 | 来自300+优质源
-                                </p>
-                                <p style="font-size:14px;opacity:0.9;margin:10px 0 0 0;line-height:1.5;">
-                                    Published: {date_str} | {len(news_items)} Selected Items | From 300+ Sources
-                                </p>
-                            </td>
-                        </tr>
+<body style="margin:0;padding:0;background-color:#f5f7fa;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Hiragino Sans GB','Microsoft YaHei',Arial,sans-serif;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;">
 
-                        <!-- Content -->
-                        <tr>
-                            <td style="padding:30px;background:#f8fafc;">
-                                {("".join(news_items_html))}
-                            </td>
-                        </tr>
+    <!-- Outer Wrapper -->
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#f5f7fa;">
+        <tr>
+            <td align="center" style="padding:20px 10px;">
 
-                        <!-- Footer -->
-                        <tr>
-                            <td style="border-top:2px solid #e5e7eb;background:#ffffff;padding:30px;text-align:center;font-size:13px;color:#6b7280;">
-                                <p style="margin:0 0 8px 0;line-height:1.6;font-weight:500;color:#374151;">由 <strong style="color:#1e3a8a;">DeepDive Tracking</strong> 提供 - AI资讯智能平台</p>
-                                <p style="margin:0 0 8px 0;line-height:1.6;">Generated by <strong>DeepDive Tracking</strong> - AI News Intelligence Platform</p>
-                                <p style="margin:0;line-height:1.6;color:#9ca3af;">© 2025 DeepDive Tracking. All rights reserved.</p>
-                            </td>
-                        </tr>
-                    </table>
-                </td>
-            </tr>
-        </table>
-    </div>
+                <!-- Main Container (max 600px) -->
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;background-color:#ffffff;border-radius:8px;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,0.1);">
+
+                    <!-- Header with Logo and Title -->
+                    <tr>
+                        <td style="background:linear-gradient(135deg, #667eea 0%, #764ba2 100%);background-color:#667eea;padding:40px 30px;color:#ffffff;">
+                            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                                <!-- Logo -->
+                                <tr>
+                                    <td style="padding-bottom:20px;">
+                                        <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+                                            <tr>
+                                                <td style="background-color:#ffffff;width:42px;height:42px;border-radius:8px;text-align:center;vertical-align:middle;font-size:24px;padding:8px;">
+                                                    🔍
+                                                </td>
+                                                <td style="padding-left:12px;font-size:16px;color:#ffffff;font-weight:500;">
+                                                    Deepdive Tracking
+                                                </td>
+                                            </tr>
+                                        </table>
+                                    </td>
+                                </tr>
+                                <!-- Title -->
+                                <tr>
+                                    <td style="font-size:32px;font-weight:700;color:#ffffff;padding-bottom:15px;line-height:1.2;">
+                                        AI News Daily Digest
+                                    </td>
+                                </tr>
+                                <!-- Metadata -->
+                                <tr>
+                                    <td style="font-size:14px;color:#ffffff;opacity:0.95;line-height:1.8;">
+                                        📅 {date_str} &nbsp;&nbsp;|&nbsp;&nbsp; 📊 {len(news_items)} 精选文章 &nbsp;&nbsp;|&nbsp;&nbsp; 🌐 来自 300+ 优质源
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+
+                    <!-- Summary Section -->
+                    <tr>
+                        <td style="background-color:#f8f9fa;padding:30px;border-bottom:1px solid #dee2e6;">
+                            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                                <tr>
+                                    <td style="font-size:16px;font-weight:600;color:#495057;padding-bottom:12px;">
+                                        📌 今日要点
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td style="font-size:14px;color:#6c757d;line-height:1.7;">
+                                        精心筛选的{len(news_items)}条AI行业重要资讯，涵盖技术突破、商业动态、行业分析等多个维度，由AI系统智能评分排序，为您呈现最有价值的行业洞察。
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+
+                    <!-- News List Section -->
+                    <tr>
+                        <td style="padding:30px 20px;">
+                            {("".join(news_items_html))}
+                        </td>
+                    </tr>
+
+                    <!-- Footer -->
+                    <tr>
+                        <td style="background-color:#f8f9fa;padding:30px;text-align:center;border-top:1px solid #dee2e6;">
+                            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                                <tr>
+                                    <td style="font-size:14px;color:#6c757d;line-height:1.8;padding-bottom:15px;">
+                                        <strong>AI News Daily Digest</strong> - 每日为您精选最有价值的AI行业资讯
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td style="font-size:13px;color:#adb5bd;line-height:1.6;padding-bottom:15px;">
+                                        本邮件由AI系统自动生成 | 数据来源于300+优质信息源
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td style="font-size:12px;color:#adb5bd;">
+                                        © 2025 Deepdive Tracking. All rights reserved.
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td style="padding-top:20px;">
+                                        <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center">
+                                            <tr>
+                                                <td style="padding:0 10px;">
+                                                    <a href="https://deepdive-tracking.github.io" style="color:#667eea;text-decoration:none;font-size:12px;">官网</a>
+                                                </td>
+                                                <td style="color:#dee2e6;">|</td>
+                                                <td style="padding:0 10px;">
+                                                    <a href="https://deepdive-tracking.github.io/subscribe" style="color:#667eea;text-decoration:none;font-size:12px;">订阅设置</a>
+                                                </td>
+                                                <td style="color:#dee2e6;">|</td>
+                                                <td style="padding:0 10px;">
+                                                    <a href="https://deepdive-tracking.github.io/unsubscribe" style="color:#667eea;text-decoration:none;font-size:12px;">取消订阅</a>
+                                                </td>
+                                            </tr>
+                                        </table>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+
+                </table>
+                <!-- Main Container End -->
+
+            </td>
+        </tr>
+    </table>
+    <!-- Outer Wrapper End -->
+
 </body>
 </html>"""
 
