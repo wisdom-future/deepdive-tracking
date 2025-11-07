@@ -24,8 +24,8 @@ def run_workflow_script(workflow_type: str) -> Dict[str, Any]:
         Dict with workflow execution status
     """
     try:
-        # Get project root
-        project_root = Path(__file__).parent.parent.parent.parent
+        # Get project root (workflows.py is in src/api/v1/endpoints/, so need 4 parents to get to project root)
+        project_root = Path(__file__).parent.parent.parent.parent.parent
         workflow_script = project_root / "scripts" / "publish" / "daily_complete_workflow.py"
 
         if not workflow_script.exists():
