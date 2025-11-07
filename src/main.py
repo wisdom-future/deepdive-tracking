@@ -12,7 +12,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from src import __version__
 from src.config import get_settings
-from src.api.v1.endpoints import news, processed_news, statistics
+from src.api.v1.endpoints import news, processed_news, statistics, workflows
 
 
 def create_app() -> FastAPI:
@@ -607,6 +607,7 @@ def create_app() -> FastAPI:
     app.include_router(news.router, prefix="/api/v1")
     app.include_router(processed_news.router, prefix="/api/v1")
     app.include_router(statistics.router, prefix="/api/v1")
+    app.include_router(workflows.router, prefix="/api/v1")
 
     return app
 

@@ -8,7 +8,7 @@ import sys
 import os
 import asyncio
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
 
 # Add project root to Python path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../..'))
@@ -22,9 +22,9 @@ logger = logging.getLogger(__name__)
 
 from src.services.channels.email.email_publisher import EmailPublisher
 from src.config.settings import get_settings
-from src.models import ProcessedNews
+from src.models import ProcessedNews, RawNews
 from src.database.connection import get_session
-from sqlalchemy import desc
+from sqlalchemy import desc, and_
 from sqlalchemy.orm import joinedload
 
 
@@ -311,19 +311,35 @@ async def main():
         print(f"  ERROR: {e}")
         return False
 
-    # Step 3: Fetch TOP news from database
-    logger.info("Step 3: Fetching TOP 10 news items from database...")
-    print("\nStep 3: Fetching TOP 10 news items...")
+    # Step 3: Fetch TOP news from database (last 24 hours only)
+    logger.info("Step 3: Fetching TOP 10 news items from last 24 hours...")
+    print("\nStep 3: Fetching TOP 10 news items (last 24 hours)...")
 
     session = None
     try:
         session = get_session()
 
-        top_news = session.query(ProcessedNews).options(
+        # Calculate 24 hours ago
+        time_threshold = datetime.now() - timedelta(hours=24)
+        logger.info(f"  Time threshold: {time_threshold.strftime('%Y-%m-%d %H:%M:%S')}")
+        print(f"  Time threshold: {time_threshold.strftime('%Y-%m-%d %H:%M:%S')}")
+
+        # Query TOP news from last 24 hours
+        # Join with RawNews to filter by published_at and collected_at
+        top_news = session.query(ProcessedNews).join(
+            RawNews, ProcessedNews.raw_news_id == RawNews.id
+        ).filter(
+            and_(
+                # Either published_at or collected_at within last 24 hours
+                # (some sources may not have accurate published_at)
+                RawNews.collected_at >= time_threshold,
+                ProcessedNews.score.isnot(None)
+            )
+        ).options(
             joinedload(ProcessedNews.raw_news)
         ).order_by(
             desc(ProcessedNews.score)
-        ).limit(10).all()
+        ).limit(15).all()  # Get top 15 to have more selection
 
         if not top_news:
             logger.warning("No processed news found in database")

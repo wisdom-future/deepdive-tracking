@@ -46,6 +46,10 @@ dependencies = [
     "aiohttp>=3.9.0",
     "tweepy>=4.14.0",
 
+    # Content Extraction
+    "newspaper3k>=0.2.8",
+    "langdetect>=1.0.9",
+
     # Logging
     "loguru>=0.7.0",
 

@@ -1,6 +1,6 @@
 """RawNews model for raw collected news."""
 
-from sqlalchemy import String, Integer, Boolean, Float, Text, DateTime, LargeBinary, CheckConstraint, ForeignKey
+from sqlalchemy import String, Integer, BigInteger, Boolean, Float, Text, DateTime, LargeBinary, CheckConstraint, ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from typing import Optional
 from src.models.base import Base, BaseModel
@@ -18,6 +18,7 @@ class RawNews(BaseModel, Base):
     html_content: Mapped[Optional[bytes]] = mapped_column(LargeBinary)
     language: Mapped[str] = mapped_column(String(10), default="en")
     hash: Mapped[str] = mapped_column(String(64), unique=False, nullable=False, index=True)  # Allow duplicates for tracking, keep index for performance
+    content_simhash: Mapped[Optional[int]] = mapped_column(BigInteger, nullable=True, index=True, comment="Content simhash for similarity detection")
     author: Mapped[Optional[str]] = mapped_column(String(255))
     source_name: Mapped[Optional[str]] = mapped_column(String(255))
     published_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), nullable=False)

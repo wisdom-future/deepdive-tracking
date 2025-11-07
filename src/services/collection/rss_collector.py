@@ -15,6 +15,12 @@ except ImportError:
     detect = None
     LangDetectException = Exception
 
+try:
+    from newspaper import Article as NewspaperArticle
+except ImportError:
+    # Fallback if newspaper3k not installed
+    NewspaperArticle = None
+
 from src.models import DataSource, RawNews
 from src.services.collection.base_collector import BaseCollector
 from src.utils.html_cleaner import HTMLCleaner
@@ -80,31 +86,44 @@ class RSSCollector(BaseCollector):
 
         for entry in parsed.entries[:max_items]:
             try:
-                # Extract content with raw HTML and cleaned text
-                content, html_content = self._extract_content(entry)
+                # Extract content with raw HTML and cleaned text from RSS
+                rss_content, rss_html = self._extract_content(entry)
 
                 # Validate content is not empty and meets minimum quality
-                if not content or len(content.strip()) < 50:
+                if not rss_content or len(rss_content.strip()) < 50:
                     self.logger.warning(
-                        f"Skipping entry with insufficient content (len={len(content)}): "
+                        f"Skipping entry with insufficient content (len={len(rss_content)}): "
                         f"{entry.get('title', 'No title')}"
                     )
                     continue
 
-                # Detect language from content
-                language = self._detect_language(content)
+                # Attempt to fetch full article if RSS content is too short
+                article_url = entry.get("link", "")
+                full_article = await self._fetch_full_article(
+                    article_url, rss_content, rss_html
+                )
+
+                # Use fetched content (or fall back to RSS content)
+                final_content = full_article["content"]
+                final_html = full_article["html_content"]
+
+                # Detect language from final content
+                language = self._detect_language(final_content)
 
                 # Extract author with multiple sources
                 author = self._extract_author(entry)
 
                 article = {
                     "title": entry.get("title", ""),
-                    "url": entry.get("link", ""),
-                    "content": content,
+                    "url": article_url,
+                    "content": final_content,
                     "author": author,
                     "published_at": self._parse_published_date(entry),
                     "language": language,
-                    "html_content": html_content,  # ✅ Save raw HTML
+                    "html_content": final_html,
+                    # Metadata about content source
+                    "content_source": full_article["content_source"],
+                    "is_full_text": full_article["is_full_text"],
                 }
 
                 # Validate required fields
@@ -260,3 +279,134 @@ class RSSCollector(BaseCollector):
 
         # Fallback to current time if date not found
         return datetime.now(UTC)
+
+    async def _fetch_full_article(
+        self, url: str, rss_content: str, rss_html: str
+    ) -> Dict[str, Any]:
+        """
+        Fetch full article content when RSS only provides summary.
+
+        This method determines if RSS content is insufficient (likely just a summary),
+        and if so, fetches and extracts the full article from the source URL.
+
+        Args:
+            url: Article URL
+            rss_content: Cleaned text content from RSS feed
+            rss_html: Raw HTML content from RSS feed
+
+        Returns:
+            Dictionary with:
+                - content: str - Full article text (or RSS content if fetch fails)
+                - html_content: str - Raw HTML (or RSS HTML if fetch fails)
+                - is_full_text: bool - Whether full text was successfully fetched
+                - content_source: str - Source of content ('rss', 'fetched', 'failed')
+
+        Strategy:
+            1. If RSS content is long enough (>500 chars), assume it's full text
+            2. Otherwise, try to fetch full article from URL using newspaper3k
+            3. If fetch succeeds and yields more content, use fetched version
+            4. Otherwise, fall back to RSS content
+        """
+        # Define threshold for "sufficient" content length
+        MIN_FULL_TEXT_LENGTH = 500
+
+        # Check if RSS content is already sufficient
+        if len(rss_content) >= MIN_FULL_TEXT_LENGTH:
+            self.logger.debug(
+                f"RSS content sufficient ({len(rss_content)} chars), skipping fetch for {url}"
+            )
+            return {
+                "content": rss_content,
+                "html_content": rss_html,
+                "is_full_text": True,
+                "content_source": "rss",
+            }
+
+        # Check if newspaper3k is available
+        if NewspaperArticle is None:
+            self.logger.warning(
+                "newspaper3k not installed, cannot fetch full article. "
+                "Install with: pip install newspaper3k"
+            )
+            return {
+                "content": rss_content,
+                "html_content": rss_html,
+                "is_full_text": False,
+                "content_source": "rss",
+            }
+
+        # Attempt to fetch full article
+        try:
+            self.logger.info(
+                f"RSS content short ({len(rss_content)} chars), fetching full article from {url}"
+            )
+
+            # Run newspaper3k in thread pool (it's CPU-bound)
+            loop = asyncio.get_event_loop()
+            article = await loop.run_in_executor(
+                None, self._extract_with_newspaper, url
+            )
+
+            if article and article.get("text") and article.get("html"):
+                fetched_text = article["text"]
+                fetched_html = article["html"]
+
+                # Only use fetched content if it's significantly longer than RSS content
+                if len(fetched_text) > len(rss_content) * 1.5:
+                    self.logger.info(
+                        f"Successfully fetched full article ({len(fetched_text)} chars) "
+                        f"vs RSS ({len(rss_content)} chars)"
+                    )
+                    return {
+                        "content": fetched_text,
+                        "html_content": fetched_html,
+                        "is_full_text": True,
+                        "content_source": "fetched",
+                    }
+                else:
+                    self.logger.warning(
+                        f"Fetched content not significantly longer, using RSS content"
+                    )
+
+        except Exception as e:
+            self.logger.warning(f"Failed to fetch full article from {url}: {e}")
+
+        # Fallback to RSS content
+        return {
+            "content": rss_content,
+            "html_content": rss_html,
+            "is_full_text": False,
+            "content_source": "rss",
+        }
+
+    @staticmethod
+    def _extract_with_newspaper(url: str) -> Optional[Dict[str, str]]:
+        """
+        Extract article content using newspaper3k.
+
+        This is a synchronous method designed to be run in a thread pool.
+
+        Args:
+            url: Article URL
+
+        Returns:
+            Dictionary with 'text' and 'html' keys, or None if extraction fails
+        """
+        if NewspaperArticle is None:
+            return None
+
+        try:
+            article = NewspaperArticle(url)
+            article.download()
+            article.parse()
+
+            if article.text and article.html:
+                return {
+                    "text": article.text,
+                    "html": article.html,
+                }
+
+        except Exception as e:
+            logger.debug(f"Newspaper extraction failed for {url}: {e}")
+
+        return None
