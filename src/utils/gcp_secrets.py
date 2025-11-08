@@ -57,6 +57,9 @@ def load_gcp_secrets_to_env(project_id: Optional[str] = None):
         project_id: GCP project ID (defaults to GOOGLE_CLOUD_PROJECT env var)
     """
     secrets_map = {
+        # Database configuration
+        "deepdive-db-password": "CLOUDSQL_PASSWORD",
+
         # Email configuration
         "gmail-user": "SMTP_USER",
         "gmail-app-password": "SMTP_PASSWORD",
