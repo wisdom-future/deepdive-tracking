@@ -88,7 +88,7 @@ def get_summary_prompt(
         Dictionary with professional, scientific, professional_en, and scientific_en summaries
     """
     # 中文基础提示词
-    base_prompt_zh = f"""基于以下新闻信息，请生成摘要：
+    base_prompt_zh = f"""基于以下新闻信息，请生成简短摘要：
 
 【新闻信息】
 标题：{title}
@@ -97,35 +97,36 @@ def get_summary_prompt(
 分类：{category}
 关键点：{', '.join(key_points)}
 
-要求：
-- 摘要长度：150-200字
-- 语言准确、表述清晰
-- 保留新闻的核心信息和重要细节"""
+**核心要求**：
+- 摘要长度：严格控制在50字以内（不超过50个汉字）
+- 必须使用纯中文表达，即使原文是英文也必须翻译为中文
+- 完整说明新闻的核心内容
+- 语言精炼、简洁有力"""
 
     professional_prompt = f"""{base_prompt_zh}
 
 【专业版摘要要求】
 - 面向技术决策者和AI从业者
-- 保留技术术语和专业细节
-- 重点强调对技术发展的意义
-- 包含具体的数据和指标
+- 使用纯中文，保留关键技术术语的中文表达
+- 50字以内完整说明核心内容
+- 包含最关键的数据或指标
 
 请返回JSON格式：
-{{"summary_pro": "<专业版摘要>"}}"""
+{{"summary_pro": "<50字以内的纯中文专业摘要>"}}"""
 
     scientific_prompt = f"""{base_prompt_zh}
 
 【科普版摘要要求】
 - 面向非专业人士（PM、投资人、爱好者）
-- 用通俗易懂的语言解释技术概念
-- 比喻和类比辅助理解
+- 用通俗易懂的纯中文表达
+- 50字以内完整说明核心内容
 - 强调现实意义和应用价值
 
 请返回JSON格式：
-{{"summary_sci": "<科普版摘要>"}}"""
+{{"summary_sci": "<50字以内的纯中文科普摘要>"}}"""
 
     # English base prompt
-    base_prompt_en = f"""Based on the following news information, please generate a summary:
+    base_prompt_en = f"""Based on the following news information, please generate a concise summary:
 
 [News Information]
 Title: {title}
@@ -134,32 +135,33 @@ Score: {score}/100
 Category: {category}
 Key Points: {', '.join(key_points)}
 
-Requirements:
-- Summary length: 150-200 words
-- Accurate language and clear expression
-- Preserve core information and important details from the article"""
+**Core Requirements**:
+- Summary length: MAXIMUM 30 words (strictly under 30 words)
+- Use pure English expression
+- Completely explain the core content of the news
+- Concise and powerful language"""
 
     professional_prompt_en = f"""{base_prompt_en}
 
 [Professional Summary Requirements]
 - Targeted at tech decision-makers and AI practitioners
-- Preserve technical terminology and professional details
-- Emphasize significance for technology development
-- Include specific data and metrics
+- Keep key technical terms
+- Complete core content in 30 words or less
+- Include most critical data or metrics
 
 Please return in JSON format:
-{{"summary_pro_en": "<professional summary>"}}"""
+{{"summary_pro_en": "<professional summary in 30 words or less>"}}"""
 
     scientific_prompt_en = f"""{base_prompt_en}
 
 [Popular Science Summary Requirements]
 - Targeted at non-technical audience (PMs, investors, enthusiasts)
-- Explain technical concepts in accessible language
-- Use analogies and metaphors for understanding
-- Emphasize practical significance and application value
+- Use accessible language
+- Complete core content in 30 words or less
+- Emphasize practical significance and value
 
 Please return in JSON format:
-{{"summary_sci_en": "<popular science summary>"}}"""
+{{"summary_sci_en": "<popular science summary in 30 words or less>"}}"""
 
     return {
         "professional": professional_prompt,

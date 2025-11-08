@@ -388,6 +388,70 @@ def create_app() -> FastAPI:
                 "timestamp": datetime.now().isoformat()
             }
 
+    @app.post("/clean-database")
+    async def clean_database() -> dict:
+        """清空数据库所有数据（仅保留data_sources）
+
+        用于端到端测试前的完全重置
+
+        Returns:
+            dict: 清空结果
+        """
+        logger = logging.getLogger(__name__)
+        logger.info("Database clean request received")
+
+        try:
+            from src.database.connection import get_session
+            from src.models import RawNews, ProcessedNews, PublishedContent, CostLog
+
+            session = get_session()
+
+            # 统计
+            raw_before = session.query(RawNews).count()
+            processed_before = session.query(ProcessedNews).count()
+
+            logger.info(f"Before clean: raw_news={raw_before}, processed_news={processed_before}")
+
+            # 按依赖顺序删除 (cost_log必须在processed_news之前删除，因为有外键约束)
+            deleted_published = session.query(PublishedContent).delete()
+            deleted_cost = session.query(CostLog).delete()
+            deleted_processed = session.query(ProcessedNews).delete()
+            deleted_raw = session.query(RawNews).delete()
+
+            session.commit()
+
+            # 验证
+            raw_after = session.query(RawNews).count()
+            processed_after = session.query(ProcessedNews).count()
+
+            session.close()
+
+            logger.info(f"After clean: raw_news={raw_after}, processed_news={processed_after}")
+
+            return {
+                "status": "success",
+                "deleted": {
+                    "raw_news": deleted_raw,
+                    "processed_news": deleted_processed,
+                    "published_content": deleted_published,
+                    "cost_log": deleted_cost
+                },
+                "verification": {
+                    "raw_news_count": raw_after,
+                    "processed_news_count": processed_after,
+                    "is_clean": raw_after == 0 and processed_after == 0
+                },
+                "timestamp": datetime.now().isoformat()
+            }
+
+        except Exception as e:
+            logger.error(f"Database clean failed: {e}", exc_info=True)
+            return {
+                "status": "error",
+                "message": str(e),
+                "timestamp": datetime.now().isoformat()
+            }
+
     @app.post("/seed-test-data")
     async def seed_test_data() -> dict:
         """Seed the database with test processed news data for email/publishing testing.
@@ -554,6 +618,292 @@ def create_app() -> FastAPI:
 
         except Exception as e:
             logger.error(f"Email publishing failed: {e}", exc_info=True)
+            return {
+                "status": "error",
+                "message": str(e),
+                "timestamp": datetime.now().isoformat()
+            }
+
+    @app.post("/diagnose/score-sample")
+    async def diagnose_score_sample(count: int = 5) -> dict:
+        """Score a small sample of news for testing.
+
+        Args:
+            count: Number of news to score (default 5)
+
+        Returns:
+            dict: Scoring results
+        """
+        logger = logging.getLogger(__name__)
+        logger.info(f"Scoring sample diagnostic: {count} items")
+
+        try:
+            from src.database.connection import get_session
+            from src.models import RawNews, ProcessedNews
+            from src.services.ai import ScoringService
+            from src.config import get_settings
+
+            session = get_session()
+            settings = get_settings()
+
+            # Get unscored news
+            unscored = session.query(RawNews).filter(
+                ~RawNews.id.in_(session.query(ProcessedNews.raw_news_id))
+            ).limit(count).all()
+
+            if not unscored:
+                return {
+                    "status": "success",
+                    "message": "No unscored news found",
+                    "timestamp": datetime.now().isoformat()
+                }
+
+            logger.info(f"Found {len(unscored)} unscored news")
+
+            # Initialize scoring service
+            service = ScoringService(settings, session)
+            logger.info(f"Using {settings.ai_provider} with model {service.model}")
+
+            # Score each item
+            results = []
+            for news in unscored:
+                try:
+                    logger.info(f"Scoring: {news.title[:50]}")
+                    result = await service.score_news(news)
+                    await service.save_to_database(news, result)
+
+                    results.append({
+                        "title": news.title[:60],
+                        "score": result.scoring.score,
+                        "summary_pro": result.summaries.summary_pro[:50] if result.summaries.summary_pro else None,
+                        "cost": result.metadata.cost
+                    })
+                except Exception as e:
+                    logger.error(f"Failed to score {news.id}: {e}")
+                    results.append({
+                        "title": news.title[:60],
+                        "error": str(e)[:100]
+                    })
+
+            session.commit()
+
+            return {
+                "status": "success",
+                "scored_count": len([r for r in results if 'score' in r]),
+                "failed_count": len([r for r in results if 'error' in r]),
+                "results": results,
+                "timestamp": datetime.now().isoformat()
+            }
+
+        except Exception as e:
+            logger.error(f"Score sample diagnostic failed: {e}", exc_info=True)
+            return {
+                "status": "error",
+                "message": str(e),
+                "error_type": type(e).__name__,
+                "timestamp": datetime.now().isoformat()
+            }
+
+    @app.post("/fix-simhash-column")
+    async def fix_simhash_column() -> dict:
+        """Fix content_simhash column type from bigint to numeric.
+
+        Returns:
+            dict: Fix result
+        """
+        logger = logging.getLogger(__name__)
+        logger.info("Fixing content_simhash column type")
+
+        try:
+            from src.database.connection import get_session
+            from sqlalchemy import text
+
+            session = get_session()
+
+            # Alter column type to VARCHAR to support unsigned 64-bit integers as strings
+            session.execute(text(
+                "ALTER TABLE raw_news ALTER COLUMN content_simhash TYPE VARCHAR(20) USING content_simhash::VARCHAR"
+            ))
+            session.commit()
+
+            logger.info("Successfully changed content_simhash to VARCHAR(20)")
+
+            return {
+                "status": "success",
+                "message": "content_simhash column type changed to VARCHAR(20)",
+                "timestamp": datetime.now().isoformat()
+            }
+
+        except Exception as e:
+            logger.error(f"Failed to fix simhash column: {e}", exc_info=True)
+            session.rollback()
+            return {
+                "status": "error",
+                "message": str(e),
+                "timestamp": datetime.now().isoformat()
+            }
+
+    @app.post("/diagnose/collect-all")
+    async def diagnose_collect_all() -> dict:
+        """Run full collection and return detailed statistics.
+
+        Returns:
+            dict: Detailed collection results
+        """
+        logger = logging.getLogger(__name__)
+        logger.info("Full collection diagnostic request")
+
+        try:
+            from src.database.connection import get_session
+            from src.services.collection import CollectionManager
+
+            session = get_session()
+            manager = CollectionManager(session)
+
+            logger.info("Starting collection...")
+            stats = await manager.collect_all()
+            logger.info(f"Collection completed: {stats}")
+
+            # Get current database counts
+            from src.models import RawNews
+            raw_count = session.query(RawNews).count()
+
+            return {
+                "status": "success",
+                "collection_stats": stats,
+                "database_count": raw_count,
+                "timestamp": datetime.now().isoformat()
+            }
+
+        except Exception as e:
+            logger.error(f"Collection diagnostic failed: {e}", exc_info=True)
+            return {
+                "status": "error",
+                "message": str(e),
+                "error_type": type(e).__name__,
+                "timestamp": datetime.now().isoformat()
+            }
+
+    @app.get("/diagnose/sources")
+    async def diagnose_sources() -> dict:
+        """List all data sources in database.
+
+        Returns:
+            dict: All data sources with details
+        """
+        logger = logging.getLogger(__name__)
+        logger.info("Data sources diagnostic request")
+
+        try:
+            from src.database.connection import get_session
+            from src.models import DataSource
+
+            session = get_session()
+
+            sources = session.query(DataSource).order_by(DataSource.priority.desc()).all()
+
+            return {
+                "status": "success",
+                "total_sources": len(sources),
+                "sources": [
+                    {
+                        "id": s.id,
+                        "name": s.name,
+                        "type": s.type,
+                        "url": s.url,
+                        "priority": s.priority,
+                        "is_enabled": s.is_enabled,
+                        "max_items_per_run": s.max_items_per_run
+                    }
+                    for s in sources
+                ],
+                "timestamp": datetime.now().isoformat()
+            }
+
+        except Exception as e:
+            logger.error(f"Sources diagnostic failed: {e}", exc_info=True)
+            return {
+                "status": "error",
+                "message": str(e),
+                "timestamp": datetime.now().isoformat()
+            }
+
+    @app.post("/diagnose/rss-source")
+    async def diagnose_rss_source(source_name: str = "OpenAI News") -> dict:
+        """Diagnose RSS collection for a specific source.
+
+        Args:
+            source_name: Name of the data source to test
+
+        Returns:
+            dict: Detailed diagnostic information
+        """
+        logger = logging.getLogger(__name__)
+        logger.info(f"RSS diagnostic request for source: {source_name}")
+
+        try:
+            from src.database.connection import get_session
+            from src.models import DataSource
+            from src.services.collection.rss_collector import RSSCollector
+
+            session = get_session()
+
+            # Find the source
+            source = session.query(DataSource).filter(
+                DataSource.name == source_name
+            ).first()
+
+            if not source:
+                return {
+                    "status": "error",
+                    "message": f"Source '{source_name}' not found",
+                    "timestamp": datetime.now().isoformat()
+                }
+
+            # Test RSS collection
+            logger.info(f"Testing RSS collection for: {source.url}")
+            collector = RSSCollector(source)
+
+            try:
+                articles = await collector.collect()
+
+                return {
+                    "status": "success",
+                    "source": {
+                        "name": source.name,
+                        "url": source.url,
+                        "enabled": source.is_enabled,
+                        "priority": source.priority
+                    },
+                    "result": {
+                        "articles_collected": len(articles),
+                        "sample_articles": [
+                            {
+                                "title": a["title"][:60],
+                                "url": a["url"],
+                                "content_length": len(a.get("content", "")),
+                                "published_at": a.get("published_at")
+                            }
+                            for a in articles[:3]
+                        ]
+                    },
+                    "timestamp": datetime.now().isoformat()
+                }
+            except Exception as collect_error:
+                logger.error(f"Collection failed: {collect_error}", exc_info=True)
+                return {
+                    "status": "error",
+                    "source": {
+                        "name": source.name,
+                        "url": source.url
+                    },
+                    "error": str(collect_error),
+                    "error_type": type(collect_error).__name__,
+                    "timestamp": datetime.now().isoformat()
+                }
+
+        except Exception as e:
+            logger.error(f"Diagnostic failed: {e}", exc_info=True)
             return {
                 "status": "error",
                 "message": str(e),

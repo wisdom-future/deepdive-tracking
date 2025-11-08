@@ -378,12 +378,11 @@ async def main():
         print(f"  Time threshold: {time_threshold.strftime('%Y-%m-%d %H:%M:%S')}")
 
         # Query TOP news from last 24 hours
-        # Join with RawNews to filter by created_at
-        top_news = session.query(ProcessedNews).join(
+        # First get all matching news, then deduplicate in Python
+        all_news = session.query(ProcessedNews).join(
             RawNews, ProcessedNews.raw_news_id == RawNews.id
         ).filter(
             and_(
-                # Filter by created_at (when the news was added to our system)
                 RawNews.created_at >= time_threshold,
                 ProcessedNews.score.isnot(None)
             )
@@ -391,7 +390,18 @@ async def main():
             joinedload(ProcessedNews.raw_news)
         ).order_by(
             desc(ProcessedNews.score)
-        ).limit(15).all()  # Get top 15 to have more selection
+        ).all()
+
+        # Deduplicate by title in Python (keep first occurrence with highest score)
+        seen_titles = set()
+        top_news = []
+        for news in all_news:
+            if news.raw_news and news.raw_news.title:
+                if news.raw_news.title not in seen_titles:
+                    seen_titles.add(news.raw_news.title)
+                    top_news.append(news)
+                    if len(top_news) >= 10:  # Get top 10 unique news items
+                        break
 
         if not top_news:
             logger.warning("No processed news found in database")
@@ -446,20 +456,23 @@ async def main():
     print("\nStep 5: Sending email via SMTP...")
 
     try:
-        email_title = f"AI News Daily Digest - {datetime.now().strftime('%Y-%m-%d')} ({len(top_news)} items)"
+        email_title = f"DeepDive AI Daily - {datetime.now().strftime('%Y-%m-%d')}"
 
-        logger.info(f"Calling EmailPublisher.publish_article()...")
-        result = await publisher.publish_article(
-            title=email_title,
-            content=html_content,
-            summary=f"Top {len(top_news)} AI news items with Chinese and English bilingual summaries",
-            summary_en=f"Top {len(top_news)} AI news items - carefully curated and scored by our AI system",
-            author="DeepDive Tracking",
-            source_url="https://deepdive-tracking.github.io",
-            score=0,
-            category="Daily Digest",
-            email_list=[recipient_email]
+        logger.info(f"Sending email directly...")
+        # 直接发送HTML内容，不使用publish_article的元数据包装
+        publisher._send_email(
+            to_email=recipient_email,
+            subject=email_title,
+            html_content=html_content
         )
+
+        result = {
+            "success": True,
+            "sent_count": 1,
+            "failed_emails": [],
+            "title": email_title,
+            "recipients": 1
+        }
 
         logger.info(f"Email send result: {result}")
 

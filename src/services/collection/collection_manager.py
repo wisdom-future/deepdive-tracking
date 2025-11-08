@@ -160,7 +160,7 @@ class CollectionManager:
                 html_content=article.get("html_content"),
                 language=article.get("language", "en"),
                 hash=url_title_hash,
-                content_simhash=content_simhash,  # Store simhash
+                content_simhash=str(content_simhash) if content_simhash else None,  # Store simhash as string
                 author=article.get("author"),
                 source_name=source.name,
                 published_at=article["published_at"],
@@ -248,10 +248,16 @@ class CollectionManager:
         similar_items = []
         for item in recent_items:
             if item.content_simhash:
-                # XOR to find differing bits, count them
-                hamming_distance = bin(simhash ^ item.content_simhash).count('1')
-                if hamming_distance <= hamming_threshold:
-                    similar_items.append(item)
+                try:
+                    # Convert string simhash to int for comparison
+                    item_simhash = int(item.content_simhash) if isinstance(item.content_simhash, str) else item.content_simhash
+                    # XOR to find differing bits, count them
+                    hamming_distance = bin(simhash ^ item_simhash).count('1')
+                    if hamming_distance <= hamming_threshold:
+                        similar_items.append(item)
+                except (ValueError, TypeError):
+                    # Skip if simhash conversion fails
+                    continue
 
         return similar_items
 

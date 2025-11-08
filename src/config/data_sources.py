@@ -7,6 +7,24 @@ Sources are centralized here for easy management and updates.
 # High-priority AI news sources
 DATA_SOURCES = [
     {
+        'name': 'OpenAI News',
+        'description': 'Official OpenAI news and updates',
+        'type': 'rss',
+        'url': 'https://openai.com/blog/rss.xml',
+        'method': 'GET',
+        'priority': 10,
+        'is_enabled': True,
+    },
+    {
+        'name': 'Anthropic News',
+        'description': 'Official Anthropic news and research',
+        'type': 'rss',
+        'url': 'https://www.anthropic.com/news/rss.xml',
+        'method': 'GET',
+        'priority': 10,
+        'is_enabled': True,
+    },
+    {
         'name': 'Google DeepMind Blog',
         'description': 'Official blog of Google DeepMind',
         'type': 'rss',

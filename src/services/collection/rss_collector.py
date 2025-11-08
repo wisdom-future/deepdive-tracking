@@ -63,10 +63,12 @@ class RSSCollector(BaseCollector):
                 url,
                 timeout=aiohttp.ClientTimeout(total=30),
                 headers={"User-Agent": "DeepDive Tracking RSS Collector"},
+                allow_redirects=True,
             ) as response:
-                if response.status != 200:
-                    raise ValueError(f"Failed to fetch feed: HTTP {response.status}")
-                return await response.text()
+                response.raise_for_status()  # Raise exception for 4xx/5xx errors
+                text = await response.text()
+                logger.info(f"Fetched RSS feed: {len(text)} bytes from {url}")
+                return text
 
     async def _parse_feed(self, feed_content: str) -> List[Dict[str, Any]]:
         """Parse RSS feed content.
@@ -88,14 +90,17 @@ class RSSCollector(BaseCollector):
             try:
                 # Extract content with raw HTML and cleaned text from RSS
                 rss_content, rss_html = self._extract_content(entry)
+                rss_content_len = len(rss_content.strip()) if rss_content else 0
 
-                # Validate content is not empty and meets minimum quality
-                if not rss_content or len(rss_content.strip()) < 50:
+                # Validate content is not empty (reduced minimum from 50 to 20 chars)
+                if not rss_content or rss_content_len < 20:
                     self.logger.warning(
-                        f"Skipping entry with insufficient content (len={len(rss_content)}): "
-                        f"{entry.get('title', 'No title')}"
+                        f"Skipping entry with insufficient RSS content (len={rss_content_len}): "
+                        f"{entry.get('title', 'No title')[:60]}"
                     )
                     continue
+
+                self.logger.info(f"Processing entry: {entry.get('title', 'No title')[:60]}... (RSS content: {rss_content_len} chars)")
 
                 # Attempt to fetch full article if RSS content is too short
                 article_url = entry.get("link", "")

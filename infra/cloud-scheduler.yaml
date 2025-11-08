@@ -1,0 +1,47 @@
+# GCP Cloud Scheduler 配置
+# 每6小时自动触发邮件发送
+
+# 创建命令：
+# gcloud scheduler jobs create http deepdive-email-every-6h \
+#   --location=asia-east1 \
+#   --schedule="0 */6 * * *" \
+#   --uri="https://deepdive-tracking-726493701291.asia-east1.run.app/publish/email" \
+#   --http-method=POST \
+#   --oidc-service-account-email=deepdive-scheduler@deepdive-engine.iam.gserviceaccount.com \
+#   --oidc-token-audience="https://deepdive-tracking-726493701291.asia-east1.run.app" \
+#   --headers="Content-Type=application/json" \
+#   --message-body='{}' \
+#   --time-zone="Asia/Shanghai" \
+#   --description="DeepDive Tracking - 每6小时自动发送TOP 10新闻邮件"
+
+# 调度规则说明：
+# schedule: "0 */6 * * *"
+# - 分钟：0（整点）
+# - 小时：*/6（每6小时）
+# - 日期：*（每天）
+# - 月份：*（每月）
+# - 星期：*（每周）
+
+# 执行时间（东八区）：
+# - 00:00（凌晨12点）
+# - 06:00（早上6点）
+# - 12:00（中午12点）
+# - 18:00（傍晚6点）
+
+# 查看任务状态：
+# gcloud scheduler jobs describe deepdive-email-every-6h --location=asia-east1
+
+# 手动触发一次：
+# gcloud scheduler jobs run deepdive-email-every-6h --location=asia-east1
+
+# 暂停任务：
+# gcloud scheduler jobs pause deepdive-email-every-6h --location=asia-east1
+
+# 恢复任务：
+# gcloud scheduler jobs resume deepdive-email-every-6h --location=asia-east1
+
+# 删除任务：
+# gcloud scheduler jobs delete deepdive-email-every-6h --location=asia-east1
+
+# 查看执行日志：
+# gcloud logging read "resource.type=cloud_scheduler_job AND resource.labels.job_id=deepdive-email-every-6h" --limit 50 --format json
