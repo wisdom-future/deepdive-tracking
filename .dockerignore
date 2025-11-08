@@ -1,74 +1,26 @@
-# Git and VCS
-.git
-.gitignore
-.github
-.gitattributes
+# Ignore .env file - use environment variables in Cloud Run
+.env
+.env.*
 
-# Python
+# Python cache
 __pycache__
-*.py[cod]
-*$py.class
-*.egg-info/
-.eggs/
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-*.egg-info/
-.installed.cfg
-*.egg
+*.pyc
+*.pyo
+*.pyd
 
 # Virtual environments
 venv/
 env/
-ENV/
 
 # IDE
-.vscode
-.idea
-*.swp
-*.swo
-*~
-.DS_Store
+.vscode/
+.idea/
 
-# Environment files
-.env
-.env.local
-.env.*.local
+# Git
+.git/
 
-# Test coverage
-.coverage
-.pytest_cache/
-htmlcov/
+# Data (local only)
+data/
 
 # Logs
-logs/
 *.log
-
-# Node modules (if any)
-node_modules/
-
-# Data
-data/
-temp/
-tmp/
-
-# GitHub clone directory
-github_repo/
-
-# Cache
-.cache
-.mypy_cache
-.pytest_cache
-dist/
-
-# Documentation
-docs/_build/
