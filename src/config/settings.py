@@ -116,9 +116,12 @@ class Settings(BaseSettings):
     class Config:
         """Pydantic configuration."""
 
+        # Allow both .env file (local) and environment variables (Cloud Run)
         env_file = ".env"
         env_file_encoding = "utf-8"
         case_sensitive = False
+        # Environment variables take precedence over .env file
+        env_prefix = ""
 
 
 @lru_cache()
