@@ -912,30 +912,30 @@ def create_app() -> FastAPI:
 
     @app.post("/publish/github")
     async def publish_github() -> dict:
-        """Publish news via GitHub channel.
+        """Publish news via GitHub Pages using GitHub API.
 
         Returns:
             dict: GitHub publishing status.
         """
         logger = logging.getLogger(__name__)
-        logger.info("GitHub publishing request received")
+        logger.info("GitHub Pages publishing request received")
 
         try:
-            # Run the GitHub publisher script
+            # Run the GitHub Pages publisher script (uses GitHub API, not git)
             project_root = Path(__file__).parent.parent
-            github_script = project_root / "scripts" / "publish" / "github-publisher.py"
+            github_script = project_root / "scripts" / "publish" / "publish_to_github_pages.py"
 
-            logger.info(f"Executing GitHub publisher script: {github_script}")
+            logger.info(f"Executing GitHub Pages publisher script: {github_script}")
 
             result = subprocess.run(
                 ["python", str(github_script)],
                 capture_output=True,
                 text=True,
-                timeout=60,
+                timeout=120,  # Increased timeout for API calls
                 cwd=str(project_root)
             )
 
-            logger.info(f"GitHub publisher script exit code: {result.returncode}")
+            logger.info(f"GitHub Pages publisher exit code: {result.returncode}")
 
             return {
                 "status": "success" if result.returncode == 0 else "failed",
@@ -946,7 +946,7 @@ def create_app() -> FastAPI:
             }
 
         except Exception as e:
-            logger.error(f"GitHub publishing failed: {e}", exc_info=True)
+            logger.error(f"GitHub Pages publishing failed: {e}", exc_info=True)
             return {
                 "status": "error",
                 "message": str(e),
